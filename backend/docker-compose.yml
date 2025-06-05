@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: sneat-postgres
+    environment:
+      POSTGRES_DB: myshop
+      POSTGRES_USER: myshopuser
+      POSTGRES_PASSWORD: MyStrongPass123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  app:
+    build: .
+    container_name: sneat-app
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: "postgresql://myshopuser:MyStrongPass123@postgres:5432/myshop?schema=public"
+      PORT: 3011
+      HOST: 0.0.0.0
+    ports:
+      - "3011:3011"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:

@@ -1,0 +1,11 @@
+import { Router } from 'express';
+
+import { syncOrders, getOrders, getOrdersStats } from '../controllers/syncController';
+
+const router = Router();
+
+router.post('/sync-orders', syncOrders);
+router.get('/orders', getOrders);
+router.get('/orders/stats', getOrdersStats);
+
+export default router;

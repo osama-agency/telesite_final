@@ -1,0 +1,148 @@
+### Health Check
+GET http://localhost:3000/health
+
+### API Info
+GET http://localhost:3000/api/v1
+
+### Get All Products
+GET http://localhost:3000/api/v1/products
+
+### Get Products with Pagination
+GET http://localhost:3000/api/v1/products?page=1&limit=10
+
+### Search Products
+GET http://localhost:3000/api/v1/products/search?search=macbook&category=Laptops
+
+### Get Low Stock Products
+GET http://localhost:3000/api/v1/products/low-stock
+
+### Get Product by ID
+GET http://localhost:3000/api/v1/products/1
+
+### Create Product
+POST http://localhost:3000/api/v1/products
+Content-Type: application/json
+
+{
+  "name": "Test Product",
+  "sku": "TEST-001",
+  "price": 99.99,
+  "cost": 50.00,
+  "stock": 100,
+  "minStock": 10,
+  "category": "Test Category",
+  "description": "This is a test product"
+}
+
+### Update Product
+PUT http://localhost:3000/api/v1/products/1
+Content-Type: application/json
+
+{
+  "price": 109.99,
+  "stock": 95
+}
+
+### Update Product Stock
+PUT http://localhost:3000/api/v1/products/1/stock
+Content-Type: application/json
+
+{
+  "quantity": 10,
+  "operation": "add"
+}
+
+### Delete Product
+DELETE http://localhost:3000/api/v1/products/1
+
+### Get All Orders
+GET http://localhost:3000/api/v1/orders
+
+### Create Order
+POST http://localhost:3000/api/v1/orders
+Content-Type: application/json
+
+{
+  "customerName": "John Doe",
+  "customerEmail": "john@example.com",
+  "customerPhone": "+1234567890",
+  "shippingAddress": "123 Main St, City, Country",
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2,
+      "discount": 10
+    },
+    {
+      "productId": 2,
+      "quantity": 1
+    }
+  ]
+}
+
+### Update Order Status
+PUT http://localhost:3000/api/v1/orders/1/status
+Content-Type: application/json
+
+{
+  "status": "processing"
+}
+
+### Get Order Statistics
+GET http://localhost:3000/api/v1/orders/statistics
+
+### Get All Warehouse Orders
+GET http://localhost:3000/api/v1/warehouse-orders
+
+### Create Warehouse Order
+POST http://localhost:3000/api/v1/warehouse-orders
+Content-Type: application/json
+
+{
+  "supplierName": "Tech Supplier Inc",
+  "supplierEmail": "supplier@example.com",
+  "supplierPhone": "+1234567890",
+  "expectedDeliveryDate": "2024-01-15",
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 50,
+      "unitCost": 1800.00
+    }
+  ]
+}
+
+### Receive Warehouse Order Items
+POST http://localhost:3000/api/v1/warehouse-orders/1/receive
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "itemId": 1,
+      "receivedQuantity": 50
+    }
+  ]
+}
+
+### Get All Expenses
+GET http://localhost:3000/api/v1/expenses
+
+### Create Expense
+POST http://localhost:3000/api/v1/expenses
+Content-Type: application/json
+
+{
+  "description": "Office Supplies",
+  "amount": 150.00,
+  "category": "Office",
+  "vendor": "Office Depot",
+  "paymentMethod": "credit_card",
+  "isTaxDeductible": true
+}
+
+### Get Expenses by Category
+GET http://localhost:3000/api/v1/expenses/by-category
+
+### Get Expenses by Date Range
+GET http://localhost:3000/api/v1/expenses/by-date-range?startDate=2024-01-01&endDate=2024-12-31

@@ -1,0 +1,47 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  externalId  String      @unique @map("external_id") // ID из внешнего API
+  customerName String?    @map("customer_name")
+  customerEmail String?   @map("customer_email")
+  customerPhone String?   @map("customer_phone")
+  status      String
+  total       Decimal     @db.Decimal(10, 2)
+  currency    String      @default("USD")
+  orderDate   DateTime    @map("order_date")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  // Связь с элементами заказа
+  items       OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String   @map("order_id")
+  productId String?  @map("product_id")
+  name      String
+  quantity  Int
+  price     Decimal  @db.Decimal(10, 2)
+  total     Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Связь с заказом
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_items")
+}
