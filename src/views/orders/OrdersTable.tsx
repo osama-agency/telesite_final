@@ -1268,8 +1268,7 @@ const OrdersTable = () => {
         PaperProps={{
           className: "bg-level-2 rounded-t-2xl shadow-lg/10 transition-all duration-200 ease-out",
           sx: {
-            height: 'auto',
-            maxHeight: '35vh',
+            height: '40vh',
             backgroundImage: 'none'
           }
         }}
