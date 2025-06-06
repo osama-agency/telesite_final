@@ -9,4 +9,13 @@ const dictionaries = {
   tr: () => import('@/data/dictionaries/tr.json').then(module => module.default)
 }
 
-export const getDictionary = async (locale: Locale) => dictionaries[locale]()
+export const getDictionary = async (locale: Locale) => {
+  const dictionary = dictionaries[locale]
+
+  if (!dictionary) {
+    // Fallback to default locale if requested locale is not available
+    return dictionaries['ru']()
+  }
+
+  return dictionary()
+}
