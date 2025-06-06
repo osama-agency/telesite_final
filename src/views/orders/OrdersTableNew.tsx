@@ -487,6 +487,26 @@ const AviasalesOrdersTable = () => {
     ))
   }, [])
 
+  // Group orders by date for mobile cards
+  const groupOrdersByDate = useMemo(() => {
+    const groups: { [date: string]: OrderData[] } = {}
+
+    paginatedOrders.forEach(order => {
+      const date = new Date(order.orderDate).toLocaleDateString('ru-RU', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      }).replace(' г.', '')
+
+      if (!groups[date]) {
+        groups[date] = []
+      }
+      groups[date].push(order)
+    })
+
+    return groups
+  }, [paginatedOrders])
+
   // Render empty state
   const renderEmptyState = useCallback(() => (
     <TableRow>
@@ -544,8 +564,39 @@ const AviasalesOrdersTable = () => {
             </Typography>
           </Box>
         ) : (
-          <Stack spacing={1}>
-            {paginatedOrders.map((order, index) => {
+          <Stack spacing={3}>
+            {Object.entries(groupOrdersByDate).map(([date, orders]) => (
+              <Box key={date}>
+                {/* Date Header */}
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    color: 'text.primary',
+                    mb: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }}
+                >
+                  📅 {date}
+                  <Typography
+                    component="span"
+                    sx={{
+                      fontSize: '14px',
+                      fontWeight: 400,
+                      color: 'text.secondary',
+                      ml: 0.5
+                    }}
+                  >
+                    ({orders.length} {orders.length === 1 ? 'заказ' : orders.length < 5 ? 'заказа' : 'заказов'})
+                  </Typography>
+                </Typography>
+
+                {/* Orders for this date */}
+                <Stack spacing={1.5}>
+                  {orders.map((order, index) => {
               // Get status chip props for modern styling
               const getChipProps = (status: string) => {
                 const statusMap = {
@@ -598,104 +649,50 @@ const AviasalesOrdersTable = () => {
                   <Box
                     onClick={() => handleOrderClick(order.id)}
                     sx={{
-                      border: '1px solid #ECECEC',
-                      borderRadius: 3,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: 4,
                       bgcolor: 'background.paper',
-                      p: 2,
+                      p: 3,
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
+                      boxShadow: 'none',
+                      mb: 2,
                       '&:hover': {
                         borderColor: 'primary.main',
-                        bgcolor: 'action.hover'
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
                       },
                       '&:active': {
-                        transform: 'scale(0.995)',
-                        borderColor: 'primary.dark'
+                        transform: 'scale(0.995)'
                       }
                     }}
                   >
-                    {/* Top Row: Date */}
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        fontSize: '13px',
-                        color: 'text.secondary',
-                        display: 'block',
-                        mb: 0.75,
-                        fontWeight: 400
-                      }}
-                    >
-                      {formatDate(order.orderDate)} · #{order.externalId}
-                    </Typography>
-
-                    {/* Middle: Products/Customer */}
-                    <Box sx={{ mb: 1.5 }}>
+                    {/* Header: Order info + Amount */}
+                    <Box sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      mb: 2
+                    }}>
                       <Typography
-                        variant="body2"
-                        sx={{
-                          fontSize: '15px',
-                          fontWeight: 500,
-                          color: 'text.primary',
-                          lineHeight: 1.3,
-                          mb: getProductsDisplay().previewText ? 0.25 : 0.5
-                        }}
-                      >
-                        {getProductsDisplay().mainText}
-                      </Typography>
-
-                      {getProductsDisplay().previewText && (
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            fontSize: '13px',
-                            color: 'text.secondary',
-                            display: 'block',
-                            mb: 0.25
-                          }}
-                        >
-                          {getProductsDisplay().previewText}
-                        </Typography>
-                      )}
-
-                      {order.customerName && (
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            fontSize: '13px',
-                            color: 'text.secondary',
-                            display: 'block'
-                          }}
-                        >
-                          {order.customerName}
-                        </Typography>
-                      )}
-                    </Box>
-
-                    {/* Bottom Row: Status + Amount */}
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Chip
-                        label={getChipProps(order.status).label}
-                        color={getChipProps(order.status).color}
-                        variant="outlined"
-                        size="small"
+                        variant="caption"
                         sx={{
                           fontSize: '12px',
-                          fontWeight: 500,
-                          height: 22,
-                          '& .MuiChip-label': {
-                            px: 1
-                          }
+                          color: 'text.secondary',
+                          fontWeight: 400
                         }}
-                      />
+                      >
+                        #{order.externalId} · {formatDate(order.orderDate).replace(' г.', '')}
+                      </Typography>
 
                       <Typography
                         variant="body2"
                         onClick={(e) => handleCopyAmount(order.total, e)}
                         sx={{
-                          fontSize: '15px',
+                          fontSize: '14px',
                           fontWeight: 600,
                           color: 'text.primary',
-                          fontFamily: 'monospace',
+                          fontFamily: 'system-ui',
                           cursor: 'pointer',
                           '&:hover': {
                             color: 'primary.main'
@@ -706,10 +703,82 @@ const AviasalesOrdersTable = () => {
                         {formatCurrency(order.total)}
                       </Typography>
                     </Box>
+
+                    {/* Customer Name - Main Focus */}
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        color: 'text.primary',
+                        lineHeight: 1.4,
+                        mb: 1
+                      }}
+                    >
+                      {order.customerName || 'Клиент не указан'}
+                    </Typography>
+
+                    {/* Products - Secondary */}
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontSize: '13px',
+                        color: 'text.secondary',
+                        lineHeight: 1.3,
+                        mb: 2,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {getProductsDisplay().mainText}
+                    </Typography>
+
+                    {/* Status Badge - Subtle */}
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+                      {(() => {
+                        const statusConfig = getStatusConfig(order.status)
+                        const isSuccess = order.status === 'shipped'
+                        const isWarning = order.status === 'unpaid' || order.status === 'overdue'
+                        const isError = order.status === 'cancelled'
+
+                        return (
+                          <Box
+                            sx={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              px: 2,
+                              py: 0.75,
+                              borderRadius: 2,
+                              fontSize: '12px',
+                              fontWeight: 500,
+                              border: '1px solid',
+                              bgcolor: isSuccess ? 'rgba(34, 197, 94, 0.08)' :
+                                      isWarning ? 'rgba(245, 158, 11, 0.08)' :
+                                      isError ? 'rgba(239, 68, 68, 0.08)' :
+                                      'rgba(59, 130, 246, 0.08)',
+                              borderColor: isSuccess ? 'rgba(34, 197, 94, 0.2)' :
+                                          isWarning ? 'rgba(245, 158, 11, 0.2)' :
+                                          isError ? 'rgba(239, 68, 68, 0.2)' :
+                                          'rgba(59, 130, 246, 0.2)',
+                              color: isSuccess ? '#059669' :
+                                     isWarning ? '#d97706' :
+                                     isError ? '#dc2626' :
+                                     '#2563eb'
+                            }}
+                          >
+                            {statusConfig.label}
+                          </Box>
+                        )
+                      })()}
+                    </Box>
                   </Box>
                 </motion.div>
               )
-            })}
+                  })}
+                </Stack>
+              </Box>
+            ))}
           </Stack>
         )}
 

@@ -102,6 +102,7 @@ const OrderDetailsDrawer = ({ open, onClose, orderId }: OrderDetailsDrawerProps)
       fetch(`http://localhost:3011/api/orders/${orderId}`)
         .then(res => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
           return res.json()
         })
         .then(data => {
@@ -229,6 +230,7 @@ const OrderDetailsDrawer = ({ open, onClose, orderId }: OrderDetailsDrawerProps)
         maxHeight: '90vh',
         overflow: 'auto',
         position: 'relative',
+
         // Swipe handle для мобильного
         ...(isMobile && {
           pt: 4,
