@@ -1,0 +1,268 @@
+/* Premium Orders Table Styles - Aviasales 2025 Level */
+
+/* Table row hover animations */
+.order-row {
+  transition: background-color 0.2s ease-in-out, transform 0.1s ease-out;
+}
+
+.order-row:hover {
+  background-color: rgba(45, 44, 60, 0.6) !important;
+  transform: translateY(-1px);
+}
+
+/* Enhanced status chips */
+.status-chip {
+  transition: all 0.2s ease-in-out;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+}
+
+.status-chip:hover {
+  transform: scale(1.05);
+  filter: brightness(1.1);
+}
+
+/* Pulse animation for loading states */
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.skeleton-pulse {
+  animation: pulse-subtle 1.5s ease-in-out infinite;
+}
+
+/* Spin animation for sync button */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Enhanced scrollbar */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #4B4A65 #2E2D3D;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #2E2D3D;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #4B4A65;
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #5A5970;
+}
+
+/* Table header enhancements */
+.table-header {
+  background: rgba(38, 37, 51, 0.95);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* Action button hover effects */
+.action-button {
+  transition: all 0.15s ease;
+}
+
+.action-button:hover {
+  transform: scale(1.1);
+  background-color: rgba(75, 74, 101, 0.3) !important;
+}
+
+/* Pagination button enhancements */
+.pagination-button {
+  transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+.pagination-button:hover {
+  transform: translateY(-1px);
+}
+
+.pagination-button:disabled {
+  opacity: 0.6;
+}
+
+/* Filter dropdown enhancements */
+.filter-dropdown {
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Currency highlight effect */
+.currency-text {
+  font-variant-numeric: tabular-nums;
+  transition: color 0.2s ease, transform 0.1s ease;
+}
+
+.currency-text:hover {
+  color: #667eea !important;
+  transform: scale(1.02);
+  cursor: pointer;
+}
+
+/* Search input enhancements */
+.search-input {
+  transition: all 0.2s ease;
+}
+
+.search-input:focus-within {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+/* Custom focus styles */
+.focus-ring:focus-visible {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Status dot animation */
+.status-dot {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+/* Row fade-in animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+/* Enhanced text selection */
+::selection {
+  background-color: rgba(102, 126, 234, 0.3);
+  color: white;
+}
+
+/* Improved button gradients */
+.gradient-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  transition: all 0.2s ease;
+}
+
+.gradient-button:hover {
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46a5 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.gradient-button:active {
+  transform: translateY(0);
+}
+
+/* Filter bar enhancements */
+.filter-bar {
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Micro animations for icons */
+.icon-hover {
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.icon-hover:hover {
+  transform: scale(1.1);
+  color: #667eea;
+}
+
+/* Table cell padding consistency */
+.table-cell-padding {
+  padding-top: 14px;
+  padding-bottom: 14px;
+  line-height: 1.4;
+}
+
+/* Loading state enhancements */
+.loading-overlay {
+  background: rgba(30, 29, 40, 0.8);
+  backdrop-filter: blur(4px);
+}
+
+/* Toast notification styles */
+.toast-notification {
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Premium card shadows */
+.card-shadow {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Enhanced dividers */
+.divider-glow {
+  border-color: rgba(102, 126, 234, 0.2);
+  box-shadow: 0 0 8px rgba(102, 126, 234, 0.1);
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .status-chip {
+    border-width: 2px;
+  }
+
+  .table-header {
+    border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* Dark mode optimizations */
+@media (prefers-color-scheme: dark) {
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: #1a1a1a;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #4a4a4a;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: #5a5a5a;
+  }
+}

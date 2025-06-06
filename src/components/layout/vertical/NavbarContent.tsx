@@ -5,7 +5,6 @@ import React, { useState, useCallback } from 'react'
 
 // MUI Imports
 import classnames from 'classnames'
-import Chip from '@mui/material/Chip'
 import IconButton from '@mui/material/IconButton'
 import CircularProgress from '@mui/material/CircularProgress'
 import Dialog from '@mui/material/Dialog'
@@ -14,15 +13,12 @@ import Toolbar from '@mui/material/Toolbar'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import Box from '@mui/material/Box'
-import Stack from '@mui/material/Stack'
-import Popover from '@mui/material/Popover'
 import Paper from '@mui/material/Paper'
-import Divider from '@mui/material/Divider'
 import Grid from '@mui/material/Grid'
 import Slide from '@mui/material/Slide'
 import { useTheme } from '@mui/material/styles'
 import { useMediaQuery } from '@mui/material'
-import { TransitionProps } from '@mui/material/transitions'
+import type { TransitionProps } from '@mui/material/transitions'
 
 // Type Imports
 import type { NotificationsType } from '@components/layout/shared/NotificationsDropdown'
@@ -34,6 +30,7 @@ import ModeDropdown from '@components/layout/shared/ModeDropdown'
 import NotificationsDropdown from '@components/layout/shared/NotificationsDropdown'
 import UserDropdown from '@components/layout/shared/UserDropdown'
 import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
+import PremiumDateRangePicker from '@components/premium/PremiumDateRangePicker'
 
 // Store Imports
 import { useDateRangeStore } from '@/store/dateRangeStore'
@@ -102,10 +99,9 @@ const NavbarContent = () => {
 
   // States
   const [syncing, setSyncing] = useState(false)
-  const [datePickerAnchor, setDatePickerAnchor] = useState<HTMLElement | null>(null)
   const [fullScreenDatePicker, setFullScreenDatePicker] = useState(false)
 
-  // Format date range for badge
+  // Format date range for mobile fallback
   const formatDateRange = useCallback(() => {
     if (!range.start || !range.end) return 'Выберите период'
 
@@ -115,7 +111,7 @@ const NavbarContent = () => {
     return `${formatDate(range.start)} – ${formatDate(range.end)}`
   }, [range])
 
-  // Format example date range
+  // Format example date range for mobile
   const formatExampleRange = useCallback(() => {
     const today = new Date()
     const nextWeek = new Date()
@@ -134,21 +130,16 @@ const NavbarContent = () => {
     return `${label}: ${date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}`
   }, [])
 
-  // Handle date picker
-  const handleDatePickerClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
-    if (isDesktop) {
-      setDatePickerAnchor(event.currentTarget)
-    } else {
-      setFullScreenDatePicker(true)
-    }
-  }, [isDesktop])
+  // Handle mobile date picker only
+  const handleDatePickerClick = useCallback(() => {
+    setFullScreenDatePicker(true)
+  }, [])
 
   const handleDatePickerClose = useCallback(() => {
-    setDatePickerAnchor(null)
     setFullScreenDatePicker(false)
   }, [])
 
-  // Quick date range helpers
+  // Quick date range helpers for mobile
   const setQuickRange = useCallback((days: number) => {
     const end = new Date()
     const start = new Date()
@@ -191,52 +182,19 @@ const NavbarContent = () => {
 
   return (
     <div className={classnames(verticalLayoutClasses.navbarContent, 'flex items-center justify-between gap-2 is-full')}>
-      {/* Left: Nav Toggle + Date Range Picker */}
+      {/* Left: Nav Toggle + Premium Date Range Picker */}
       <div className='flex items-center gap-3'>
         <NavToggle />
 
-        {/* Date Range Picker */}
+        {/* Premium Date Range Picker - Desktop has sticky positioning, Mobile uses fallback */}
         {isDesktop ? (
-          /* Desktop: Badge with text */
-          <Box
-            component="button"
-            onClick={handleDatePickerClick}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              px: 3,
-              py: 1,
-              height: 32,
-              bgcolor: 'primary.main',
-              background: 'rgba(var(--mui-palette-primary-mainChannel) / 0.1)',
-              border: '1px solid',
-              borderColor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.4)',
-              borderRadius: 1,
-              cursor: 'pointer',
-              transition: theme.transitions.create(['background-color', 'border-color'], {
-                duration: theme.transitions.duration.short
-              }),
-              '&:hover': {
-                bgcolor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.15)',
-                borderColor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.6)',
-              }
-            }}
-          >
-            <i className="bx-calendar text-lg" style={{ color: theme.palette.primary.main }} />
-            <Typography
-              variant="body2"
-              sx={{
-                fontWeight: 500,
-                color: range.start && range.end ? 'text.primary' : 'text.disabled',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {formatDateRange()}
-            </Typography>
-          </Box>
+          <PremiumDateRangePicker
+            sticky={true}
+            stickyTop={64}
+            className="premium-date-picker-desktop"
+          />
         ) : (
-          /* Mobile: Icon + Period Text */
+          /* Mobile: Simplified version with bottom sheet fallback */
           <Box
             component="button"
             onClick={handleDatePickerClick}
@@ -305,87 +263,7 @@ const NavbarContent = () => {
         <UserDropdown />
       </div>
 
-      {/* Desktop Date Picker Popover */}
-      <Popover
-        open={Boolean(datePickerAnchor)}
-        anchorEl={datePickerAnchor}
-        onClose={handleDatePickerClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left'
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'left'
-        }}
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            boxShadow: theme.shadows[8],
-            overflow: 'visible',
-            p: 0
-          }
-        }}
-      >
-        <Paper sx={{ p: 3, minWidth: 400 }}>
-          {/* Quick Actions */}
-          <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
-            Быстрый выбор
-          </Typography>
 
-          <Stack direction="row" spacing={1} sx={{ mb: 3 }}>
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={setToday}
-              sx={{ minWidth: 'auto' }}
-            >
-              Сегодня
-            </Button>
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={() => setQuickRange(7)}
-              sx={{ minWidth: 'auto' }}
-            >
-              Неделя
-            </Button>
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={() => setQuickRange(30)}
-              sx={{ minWidth: 'auto' }}
-            >
-              30 дней
-            </Button>
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={setQuarter}
-              sx={{ minWidth: 'auto' }}
-            >
-              Квартал
-            </Button>
-          </Stack>
-
-          <Divider sx={{ mb: 2 }} />
-
-          {/* Calendar */}
-          <AppReactDatepicker
-            selectsRange
-            startDate={range.start ?? undefined}
-            endDate={range.end ?? undefined}
-            onChange={(dates: [Date | null, Date | null]) => {
-              setRange({ start: dates[0], end: dates[1] })
-              if (dates[0] && dates[1]) {
-                handleDatePickerClose()
-              }
-            }}
-            inline
-            dateFormat="dd.MM.yyyy"
-          />
-        </Paper>
-      </Popover>
 
       {/* Mobile Full-Screen Date Picker */}
       <Dialog

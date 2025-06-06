@@ -4,13 +4,13 @@
 import Grid from '@mui/material/Grid2'
 
 // Components Imports
-import OrdersTable from '@views/orders/OrdersTable'
+import AviasalesOrdersTable from '@views/orders/OrdersTableNew'
 
 const OrdersPage = () => {
   return (
     <Grid container spacing={6}>
       <Grid size={{ xs: 12 }}>
-        <OrdersTable />
+        <AviasalesOrdersTable />
       </Grid>
     </Grid>
   )

@@ -60,7 +60,7 @@ export const SettingsProvider = (props: Props) => {
     navbarContentWidth: 'wide',
     contentWidth: 'wide',
     footerContentWidth: 'wide',
-    primaryColor: primaryColorConfig[1].main // Pink color #DF4C9D
+    primaryColor: primaryColorConfig[0].main // Purple color #696CFF
   }
 
   const updatedInitialSettings = {

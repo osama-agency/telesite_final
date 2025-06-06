@@ -4,6 +4,53 @@ import axios from 'axios';
 import { prisma } from '../lib/prisma';
 import type { ExternalOrder } from '../types';
 
+export const getOrderById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      res.status(400).json({
+        success: false,
+        error: 'Order ID is required'
+      });
+      return;
+    }
+
+    const order = await prisma.order.findUnique({
+      where: {
+        id: id
+      },
+      include: {
+        items: true
+      }
+    });
+
+    if (!order) {
+      res.status(404).json({
+        success: false,
+        error: 'Order not found'
+      });
+      return;
+    }
+
+    const response = {
+      success: true,
+      data: {
+        order
+      }
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error fetching order:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
 export const getOrdersStats = async (req: Request, res: Response): Promise<void> => {
   try {
     const { dateFrom, dateTo } = req.query;
@@ -217,6 +264,13 @@ export const syncOrders = async (req: Request, res: Response): Promise<void> => 
             customerName: externalOrder.user.full_name,
             customerEmail: null, // не предоставляется в API
             customerPhone: null, // не предоставляется в API
+            customerCity: externalOrder.user.city,
+            customerAddress: externalOrder.user.city, // используем город как адрес
+            bankCard: externalOrder.bank_card,
+            bonus: externalOrder.bonus,
+            deliveryCost: externalOrder.delivery_cost,
+            paidAt: externalOrder.paid_at ? new Date(externalOrder.paid_at.split(' ').map((part, i) => i === 0 ? part.split('.').reverse().join('-') : part).join(' ')) : null,
+            shippedAt: externalOrder.shipped_at ? new Date(externalOrder.shipped_at.split(' ').map((part, i) => i === 0 ? part.split('.').reverse().join('-') : part).join(' ')) : null,
             status: externalOrder.status,
             total: totalAmount,
             currency: 'RUB', // предполагаем рубли
@@ -249,6 +303,13 @@ export const syncOrders = async (req: Request, res: Response): Promise<void> => 
             customerName: externalOrder.user.full_name,
             customerEmail: null,
             customerPhone: null,
+            customerCity: externalOrder.user.city,
+            customerAddress: externalOrder.user.city, // используем город как адрес
+            bankCard: externalOrder.bank_card,
+            bonus: externalOrder.bonus,
+            deliveryCost: externalOrder.delivery_cost,
+            paidAt: externalOrder.paid_at ? new Date(externalOrder.paid_at.split(' ').map((part, i) => i === 0 ? part.split('.').reverse().join('-') : part).join(' ')) : null,
+            shippedAt: externalOrder.shipped_at ? new Date(externalOrder.shipped_at.split(' ').map((part, i) => i === 0 ? part.split('.').reverse().join('-') : part).join(' ')) : null,
             status: externalOrder.status,
             total: totalAmount,
             currency: 'RUB',

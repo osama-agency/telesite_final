@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 
 // MUI Imports
 import Box from '@mui/material/Box'
-import Card from '@mui/material/Card'
+
 import Typography from '@mui/material/Typography'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
@@ -14,7 +14,7 @@ import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import TableSortLabel from '@mui/material/TableSortLabel'
-import TablePagination from '@mui/material/TablePagination'
+
 import Paper from '@mui/material/Paper'
 import IconButton from '@mui/material/IconButton'
 import Button from '@mui/material/Button'
@@ -23,21 +23,83 @@ import Skeleton from '@mui/material/Skeleton'
 import FormControl from '@mui/material/FormControl'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
-import Popover from '@mui/material/Popover'
-import Divider from '@mui/material/Divider'
+import InputAdornment from '@mui/material/InputAdornment'
+
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
+import Snackbar from '@mui/material/Snackbar'
+import Alert from '@mui/material/Alert'
+import Fade from '@mui/material/Fade'
+import SwipeableDrawer from '@mui/material/SwipeableDrawer'
+import Stack from '@mui/material/Stack'
 
 // Third-party Imports
 import { useShallow } from 'zustand/react/shallow'
+import { motion, AnimatePresence } from 'framer-motion'
 
 // Component Imports
 import CustomTextField from '@core/components/mui/TextField'
 import OrderDetailsDrawer from '@/components/orders/OrderDetailsDrawer'
-import ColumnSettingsPopover from '@/components/orders/ColumnSettingsPopover'
 
 // Store Import
 import { useOrdersFilterStore } from '@/store/ordersFilterStore'
+import { useDateRangeStore } from '@/store/dateRangeStore'
+
+
+
+// Premium Sneat Filter Button Styles
+const filterButtonStyles = `
+  .filter-button {
+    background: rgba(38, 37, 51, 0.6) !important;
+    border: 2px solid #696CFF !important;
+    border-radius: 8px !important;
+    color: #696CFF !important;
+    padding: 8px 16px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    font-family: inherit !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    min-height: 36px !important;
+    position: relative !important;
+    overflow: hidden !important;
+  }
+
+  .filter-button:hover {
+    background: #696CFF !important;
+    color: #FFFFFF !important;
+    transform: scale(1.03) !important;
+    box-shadow: 0 0 0 3px rgba(105, 108, 255, 0.25) !important;
+  }
+
+  .filter-button:active {
+    transform: scale(0.97) !important;
+  }
+
+  .filter-button .icon {
+    margin-right: 8px !important;
+  }
+
+  @media (max-width: 480px) {
+    .filter-button {
+      width: 100% !important;
+      margin: 0 16px !important;
+      padding: 10px 0 !important;
+      text-align: center !important;
+      font-size: 14px !important;
+      justify-content: center !important;
+    }
+  }
+`
+
+// Inject styles
+if (typeof document !== 'undefined') {
+  const styleElement = document.createElement('style')
+  styleElement.textContent = filterButtonStyles
+  document.head.appendChild(styleElement)
+}
 
 // Types
 interface OrderItem {
@@ -79,6 +141,8 @@ const AviasalesOrdersTable = () => {
     }))
   )
 
+  const { range } = useDateRangeStore()
+
   // MUI Theme
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('lg'))
@@ -87,14 +151,29 @@ const AviasalesOrdersTable = () => {
   const [orders, setOrders] = useState<OrderData[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
-  const [rowsPerPage, setRowsPerPage] = useState(25)
+  const [rowsPerPage, setRowsPerPage] = useState(50)
   const [orderBy, setOrderBy] = useState<keyof OrderData>('orderDate')
   const [orderDirection, setOrderDirection] = useState<Order>('desc')
-  const [filtersPopover, setFiltersPopover] = useState<HTMLElement | null>(null)
+
+  const [filtersBottomSheet, setFiltersBottomSheet] = useState(false)
+  const [searchValue, setSearchValue] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  // Snackbar state
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean
+    message: string
+    severity: 'success' | 'info' | 'warning' | 'error'
+  }>({
+    open: false,
+    message: '',
+    severity: 'success'
+  })
 
   // Order Details Drawer State
   const [detailsDrawerOpen, setDetailsDrawerOpen] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
+
 
   // Column Settings State
   const [visibleColumns, setVisibleColumns] = useState({
@@ -107,48 +186,87 @@ const AviasalesOrdersTable = () => {
     actions: true
   })
 
-  // Mock data for demo
-  const mockOrders: OrderData[] = useMemo(() => [
-    {
-      id: '1',
-      externalId: '1192',
-      customerName: 'Островский Данил Игоревич',
-      customerEmail: 'danil@example.com',
-      customerPhone: '+7 921 123 45 67',
-      status: 'shipped',
-      total: '6000',
-      currency: 'RUB',
-      orderDate: '2025-06-05',
-      createdAt: '2025-06-05T10:00:00Z',
-      updatedAt: '2025-06-05T10:00:00Z',
-      items: [
-        {
-          id: '1',
-          orderId: '1',
-          productId: '1',
-          name: 'Atomineх 25 mg',
-          quantity: 1,
-          price: '6000',
-          total: '6000',
-          createdAt: '2025-06-05T10:00:00Z',
-          updatedAt: '2025-06-05T10:00:00Z'
-        }
-      ]
-    },
-    // Add more mock data...
-  ], [])
+  // API response interface
+  interface ApiResponse {
+    success: boolean
+    data: {
+      orders: OrderData[]
+      pagination: {
+        page: number
+        limit: number
+        total: number
+        pages: number
+      }
+    }
+    message?: string
+  }
+
+  // Debounce effect for search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchValue)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchValue])
+
+  // Fetch orders from API
+  const fetchOrders = async () => {
+    try {
+      setLoading(true)
+
+      const queryParams = new URLSearchParams({
+        page: (page + 1).toString(),
+        limit: rowsPerPage.toString(),
+        sortBy: orderBy,
+        sortOrder: orderDirection.toUpperCase()
+      })
+
+      // Добавляем фильтры по дате только если они заданы в range
+      if (range.start) {
+        queryParams.append('dateFrom', range.start.toISOString().split('T')[0])
+      }
+
+      if (range.end) {
+        queryParams.append('dateTo', range.end.toISOString().split('T')[0])
+      }
+
+      const response = await fetch(`http://localhost:3011/api/orders?${queryParams}`)
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data: ApiResponse = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to fetch orders')
+      }
+
+      setOrders(data.data.orders || [])
+    } catch (err) {
+      console.error('Error fetching orders:', err)
+      setSnackbar({
+        open: true,
+        message: 'Ошибка загрузки заказов',
+        severity: 'error'
+      })
+      setOrders([]) // Fallback to empty array
+    } finally {
+      setLoading(false)
+    }
+  }
+
 
   // Load data effect
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true)
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      setOrders(mockOrders)
-      setLoading(false)
-    }
-    loadData()
-  }, [mockOrders])
+    fetchOrders()
+  }, [page, rowsPerPage, orderBy, orderDirection, debouncedSearch, range])
+
+  // Update search filter when debounced value changes
+  useEffect(() => {
+    setFilter('customer', debouncedSearch)
+    setPage(0) // Reset to first page when search changes
+  }, [debouncedSearch, setFilter])
 
   // Utility functions
   const formatCurrency = useCallback((amount: string) => {
@@ -167,39 +285,46 @@ const AviasalesOrdersTable = () => {
     }).format(new Date(dateString))
   }, [])
 
-  // Status configuration
+  // Status configuration with enhanced colors
   const getStatusConfig = useCallback((status: string) => {
     const configs = {
       shipped: {
         label: 'Отправлен',
-        className: 'bg-success/10 border-success/50 text-success',
-        dotColor: 'success.main'
+        color: '#2AC769',
+        bgColor: 'rgba(42, 199, 105, 0.1)',
+        borderColor: '#2AC769'
       },
       cancelled: {
-        label: 'Отменен',
-        className: 'bg-error/10 border-error/50 text-error',
-        dotColor: 'error.main'
+        label: 'Отменён',
+        color: '#FF4B4B',
+        bgColor: 'rgba(255, 75, 75, 0.1)',
+        borderColor: '#FF4B4B'
       },
       overdue: {
         label: 'Просрочен',
-        className: 'bg-warning/10 border-warning/50 text-warning',
-        dotColor: 'warning.main'
+        color: '#FFC732',
+        bgColor: 'rgba(255, 199, 50, 0.1)',
+        borderColor: '#FFC732'
       },
       processing: {
         label: 'Обрабатывается',
-        className: 'bg-info/10 border-info/50 text-info',
-        dotColor: 'info.main'
+        color: '#5AC8FA',
+        bgColor: 'rgba(90, 200, 250, 0.1)',
+        borderColor: '#5AC8FA'
       },
       unpaid: {
         label: 'Не оплачен',
-        className: 'bg-yellow-400/10 border-yellow-400/50 text-yellow-400',
-        dotColor: '#FACC15'
+        color: '#F5A623',
+        bgColor: 'rgba(245, 166, 35, 0.1)',
+        borderColor: '#F5A623'
       }
     }
+
     return configs[status as keyof typeof configs] || {
       label: status,
-      className: 'bg-gray-400/10 border-gray-400/50 text-gray-400',
-      dotColor: 'gray'
+      color: '#9CA3AF',
+      bgColor: 'rgba(156, 163, 175, 0.1)',
+      borderColor: '#9CA3AF'
     }
   }, [])
 
@@ -208,6 +333,7 @@ const AviasalesOrdersTable = () => {
     return orders.filter(order => {
       if (filters.status !== 'all' && order.status !== filters.status) return false
       if (filters.customer && !order.customerName?.toLowerCase().includes(filters.customer.toLowerCase())) return false
+
       return true
     })
   }, [orders, filters])
@@ -215,11 +341,24 @@ const AviasalesOrdersTable = () => {
   // Sort data
   const sortedOrders = useMemo(() => {
     return [...filteredOrders].sort((a, b) => {
-      const aValue = a[orderBy]
-      const bValue = b[orderBy]
+      let aValue: any = a[orderBy]
+      let bValue: any = b[orderBy]
 
-      if (aValue === null) return 1
-      if (bValue === null) return -1
+      // Handle null values
+      if (aValue === null || aValue === undefined) return 1
+      if (bValue === null || bValue === undefined) return -1
+
+      // Special handling for different data types
+      if (orderBy === 'orderDate' || orderBy === 'createdAt') {
+        aValue = new Date(aValue).getTime()
+        bValue = new Date(bValue).getTime()
+      } else if (orderBy === 'total') {
+        aValue = parseFloat(aValue)
+        bValue = parseFloat(bValue)
+      } else if (typeof aValue === 'string') {
+        aValue = aValue.toLowerCase()
+        bValue = bValue?.toLowerCase() || ''
+      }
 
       if (orderDirection === 'asc') {
         return aValue < bValue ? -1 : aValue > bValue ? 1 : 0
@@ -232,8 +371,10 @@ const AviasalesOrdersTable = () => {
   // Paginate data
   const paginatedOrders = useMemo(() => {
     const startIndex = page * rowsPerPage
-    return sortedOrders.slice(startIndex, startIndex + rowsPerPage)
-  }, [sortedOrders, page, rowsPerPage])
+        const result = sortedOrders.slice(startIndex, startIndex + rowsPerPage)
+
+    return result
+  }, [sortedOrders, page, rowsPerPage, orders.length, filteredOrders.length, filters.customer, filters.status])
 
   // Handlers
   const handleChangePage = useCallback((_: unknown, newPage: number) => {
@@ -252,12 +393,8 @@ const AviasalesOrdersTable = () => {
     setOrderBy(property)
   }, [orderBy, orderDirection])
 
-  const handleFiltersClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
-    setFiltersPopover(event.currentTarget)
-  }, [])
-
-  const handleFiltersClose = useCallback(() => {
-    setFiltersPopover(null)
+  const handleFiltersChipClick = useCallback(() => {
+    setFiltersBottomSheet(true)
   }, [])
 
   // Order Details handlers
@@ -275,12 +412,38 @@ const AviasalesOrdersTable = () => {
     // Required by SwipeableDrawer but we control opening via handleOrderClick
   }, [])
 
+  // Copy amount handler
+  const handleCopyAmount = useCallback(async (amount: string, event: React.MouseEvent) => {
+    event.stopPropagation()
+
+    try {
+      await navigator.clipboard.writeText(amount)
+
+      setSnackbar({
+        open: true,
+        message: 'Сумма скопирована!',
+        severity: 'success'
+      })
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'Не удалось скопировать',
+        severity: 'error'
+      })
+    }
+  }, [])
+
   // Column Settings handlers
   const handleColumnToggle = useCallback((columnId: string, visible: boolean) => {
     setVisibleColumns(prev => ({
       ...prev,
       [columnId]: visible
     }))
+  }, [])
+
+  // Close snackbar handler
+  const handleCloseSnackbar = useCallback(() => {
+    setSnackbar(prev => ({ ...prev, open: false }))
   }, [])
 
   // Column configurations for settings
@@ -343,481 +506,956 @@ const AviasalesOrdersTable = () => {
     </TableRow>
   ), [resetFilters])
 
-  return (
-    <Box>
-      {/* Header with count */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" sx={{ mb: 0.5 }}>
-          Заказы
-        </Typography>
-        <Typography className="text-sm text-gray-400">
-          ({filteredOrders.length})
-        </Typography>
-      </Box>
+  // Render mobile cards - Aviasales × Notion × Linear style
+  const renderMobileCards = () => (
+    <Box className="lg:hidden">
 
-      {/* Aviasales 2025 Filter Bar */}
+
+      {/* Cards Container */}
       <Box
-        className="bg-level-2 shadow-sm/10 rounded-md p-3 mb-4"
         sx={{
-          position: 'sticky',
-          top: 72,
-          zIndex: 10,
-          borderTop: '1px solid',
-          borderColor: 'divider'
+          overflowY: 'auto',
+          maxHeight: 'calc(100vh - 240px)',
+          '&::-webkit-scrollbar': { display: 'none' },
+          msOverflowStyle: 'none',
+          scrollbarWidth: 'none'
         }}
       >
-        <Box className="flex items-center justify-between gap-4">
-          {/* Desktop Filters - visible on xl+ screens */}
-          <Box className="hidden xl:flex items-center gap-4 flex-1">
-            <FormControl size="small" sx={{ width: 150 }}>
-              <Select
-                value={filters.status}
-                displayEmpty
-                onChange={(e) => setFilter('status', e.target.value)}
-                className="bg-level-2 border border-muted/20 rounded-md"
-                sx={{
-                  height: 36,
-                  '& .MuiOutlinedInput-input': {
-                    py: 1,
-                    px: 3,
-                    color: 'white'
-                  },
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'rgba(255, 255, 255, 0.2)',
-                    borderWidth: 1
-                  },
-                  '&:hover .MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'primary.main'
-                  },
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'primary.main',
-                    borderWidth: 1
+        {paginatedOrders.length === 0 ? (
+          <Box
+            sx={{
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 3,
+              bgcolor: 'background.paper',
+              p: 4,
+              textAlign: 'center'
+            }}
+          >
+            <Typography sx={{ fontSize: '2rem', mb: 1.5 }}>📭</Typography>
+            <Typography
+              variant="subtitle1"
+              sx={{ fontWeight: 500, mb: 0.5, color: 'text.primary' }}
+            >
+              Нет заказов
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Нет заказов по выбранным параметрам
+            </Typography>
+          </Box>
+        ) : (
+          <Stack spacing={1}>
+            {paginatedOrders.map((order, index) => {
+              // Get status chip props for modern styling
+              const getChipProps = (status: string) => {
+                const statusMap = {
+                  processing: { color: 'primary' as const, label: 'Обрабатывается' },
+                  shipped: { color: 'success' as const, label: 'Отправлен' },
+                  unpaid: { color: 'warning' as const, label: 'Не оплачен' },
+                  cancelled: { color: 'error' as const, label: 'Отменён' },
+                  overdue: { color: 'warning' as const, label: 'Просрочен' }
+                }
+                return statusMap[status as keyof typeof statusMap] || { color: 'default' as const, label: status }
+              }
+
+              // Get products display with improved multi-item handling
+              const getProductsDisplay = () => {
+                const totalItems = order.items.length
+
+                if (totalItems === 1) {
+                  // Single product - show name as before
+                  const name = order.items[0].name
+                  return {
+                    mainText: name.length > 35 ? `${name.substring(0, 35)}...` : name,
+                    previewText: null
                   }
-                }}
-                renderValue={(selected) => {
-                  if (!selected || selected === 'all') {
-                    return <Typography className="text-white/60 text-sm">Все статусы</Typography>
+                } else {
+                  // Multiple products - show count and preview
+                  const productNames = order.items.map(item => item.name).join(', ')
+                  const preview = productNames.length > 30 ? `${productNames.substring(0, 30)}...` : productNames
+
+                  // Правильное склонение слова "товар"
+                  const getProductWord = (count: number) => {
+                    if (count % 10 === 1 && count % 100 !== 11) return 'товар'
+                    if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return 'товара'
+                    return 'товаров'
                   }
-                  const config = getStatusConfig(selected)
-                  return (
-                    <Box className="flex items-center gap-2">
-                      <Box
+
+                  return {
+                    mainText: `${totalItems} ${getProductWord(totalItems)}`,
+                    previewText: preview
+                  }
+                }
+              }
+
+              return (
+                <motion.div
+                  key={order.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, delay: index * 0.03 }}
+                >
+                  <Box
+                    onClick={() => handleOrderClick(order.id)}
+                    sx={{
+                      border: '1px solid #ECECEC',
+                      borderRadius: 3,
+                      bgcolor: 'background.paper',
+                      p: 2,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      '&:hover': {
+                        borderColor: 'primary.main',
+                        bgcolor: 'action.hover'
+                      },
+                      '&:active': {
+                        transform: 'scale(0.995)',
+                        borderColor: 'primary.dark'
+                      }
+                    }}
+                  >
+                    {/* Top Row: Date */}
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontSize: '13px',
+                        color: 'text.secondary',
+                        display: 'block',
+                        mb: 0.75,
+                        fontWeight: 400
+                      }}
+                    >
+                      {formatDate(order.orderDate)} · #{order.externalId}
+                    </Typography>
+
+                    {/* Middle: Products/Customer */}
+                    <Box sx={{ mb: 1.5 }}>
+                      <Typography
+                        variant="body2"
                         sx={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          bgcolor: config.dotColor
+                          fontSize: '15px',
+                          fontWeight: 500,
+                          color: 'text.primary',
+                          lineHeight: 1.3,
+                          mb: getProductsDisplay().previewText ? 0.25 : 0.5
+                        }}
+                      >
+                        {getProductsDisplay().mainText}
+                      </Typography>
+
+                      {getProductsDisplay().previewText && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            fontSize: '13px',
+                            color: 'text.secondary',
+                            display: 'block',
+                            mb: 0.25
+                          }}
+                        >
+                          {getProductsDisplay().previewText}
+                        </Typography>
+                      )}
+
+                      {order.customerName && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            fontSize: '13px',
+                            color: 'text.secondary',
+                            display: 'block'
+                          }}
+                        >
+                          {order.customerName}
+                        </Typography>
+                      )}
+                    </Box>
+
+                    {/* Bottom Row: Status + Amount */}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Chip
+                        label={getChipProps(order.status).label}
+                        color={getChipProps(order.status).color}
+                        variant="outlined"
+                        size="small"
+                        sx={{
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          height: 22,
+                          '& .MuiChip-label': {
+                            px: 1
+                          }
                         }}
                       />
-                      <Typography className="text-white text-sm">
-                        {config.label}
+
+                      <Typography
+                        variant="body2"
+                        onClick={(e) => handleCopyAmount(order.total, e)}
+                        sx={{
+                          fontSize: '15px',
+                          fontWeight: 600,
+                          color: 'text.primary',
+                          fontFamily: 'monospace',
+                          cursor: 'pointer',
+                          '&:hover': {
+                            color: 'primary.main'
+                          }
+                        }}
+                        title="Нажмите, чтобы скопировать"
+                      >
+                        {formatCurrency(order.total)}
                       </Typography>
                     </Box>
-                  )
-                }}
-              >
-                <MenuItem value="all">
-                  <Typography className="text-gray-400">Все статусы</Typography>
-                </MenuItem>
-                {['shipped', 'cancelled', 'overdue', 'processing', 'unpaid'].map((status) => {
-                  const config = getStatusConfig(status)
-                  return (
-                    <MenuItem key={status} value={status}>
-                      <Box className="flex items-center gap-2">
-                        <Box
-                          sx={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: '50%',
-                            bgcolor: config.dotColor
-                          }}
-                        />
-                        {config.label}
-                      </Box>
-                    </MenuItem>
-                  )
-                })}
-              </Select>
-            </FormControl>
+                  </Box>
+                </motion.div>
+              )
+            })}
+          </Stack>
+        )}
 
-            <CustomTextField
-              size="small"
-              placeholder="Поиск клиента..."
-              value={filters.customer}
-              onChange={(e) => setFilter('customer', e.target.value)}
-              className="bg-level-2 border border-muted/20 rounded-md"
-              sx={{
-                maxWidth: 360,
-                '& .MuiOutlinedInput-root': {
-                  height: 36,
-                  '& fieldset': {
-                    borderColor: 'rgba(255, 255, 255, 0.2)',
-                    borderWidth: 1
-                  },
-                  '&:hover fieldset': {
-                    borderColor: 'primary.main'
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: 'primary.main',
-                    borderWidth: 1
-                  }
-                },
-                '& .MuiOutlinedInput-input': {
-                  py: 1,
-                  px: 3,
-                  color: 'white'
-                }
-              }}
-              InputProps={{
-                startAdornment: <i className="bx-search text-lg text-gray-400 mr-2" />
-              }}
-            />
+        {/* Mobile Pagination */}
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          mt: 3,
+          gap: 2
+        }}>
+          <IconButton
+            size="small"
+            disabled={page === 0}
+            onClick={() => handleChangePage(null, page - 1)}
+            sx={{
+              color: 'text.secondary',
+              border: '1px solid',
+              borderColor: 'divider',
+              '&:hover': { borderColor: 'primary.main' },
+              '&:disabled': { opacity: 0.3 }
+            }}
+          >
+            <i className="bx-chevron-left" />
+          </IconButton>
 
-            {(filters.status !== 'all' || filters.customer !== '') && (
-              <Button
-                size="small"
-                onClick={resetFilters}
-                startIcon={<i className="bx-x text-sm" />}
-                sx={{
-                  color: 'text.secondary',
-                  fontSize: '0.75rem',
-                  textTransform: 'none',
-                  p: 0.5,
-                  minWidth: 'auto'
-                }}
-              >
-                Сбросить фильтры
-              </Button>
-            )}
-          </Box>
+          <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '13px' }}>
+            {page + 1} из {Math.ceil(filteredOrders.length / rowsPerPage)}
+          </Typography>
 
-          {/* Compact Filter Button - visible on screens < xl */}
-          <Box className="flex xl:hidden items-center justify-between w-full">
-            <Box className="flex items-center gap-2">
-              {(filters.status !== 'all' || filters.customer !== '') && (
-                <Typography className="text-xs text-gray-400">
-                  Активные фильтры
-                </Typography>
-              )}
-            </Box>
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<i className="bx-tune text-lg" />}
-              onClick={handleFiltersClick}
-              sx={{
-                height: 36,
-                px: 3,
-                borderRadius: 1.5,
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-                color: 'text.primary',
-                fontWeight: 500,
-                bgcolor: 'transparent',
-                '&:hover': {
-                  bgcolor: 'action.hover',
-                  borderColor: 'primary.main',
-                  color: 'primary.main'
-                }
-              }}
-            >
-              Фильтр
-            </Button>
-          </Box>
+          <IconButton
+            size="small"
+            disabled={page >= Math.ceil(filteredOrders.length / rowsPerPage) - 1}
+            onClick={() => handleChangePage(null, page + 1)}
+            sx={{
+              color: 'text.secondary',
+              border: '1px solid',
+              borderColor: 'divider',
+              '&:hover': { borderColor: 'primary.main' },
+              '&:disabled': { opacity: 0.3 }
+            }}
+          >
+            <i className="bx-chevron-right" />
+          </IconButton>
+        </Box>
+      </Box>
+    </Box>
+  )
+
+  return (
+    <Box sx={{
+      bgcolor: 'background.default',
+      pt: 2,
+      pb: 3
+    }}>
+      {/* Header Section */}
+      <Box sx={{
+        mb: 0,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <Typography
+          variant="h4"
+          sx={{
+            fontWeight: 600,
+            fontSize: '20px',
+            color: 'text.primary',
+            mb: 0,
+            pb: 2
+          }}
+        >
+          Заказы ({filteredOrders.length})
+        </Typography>
+
+        {/* Filters Button - Mobile Only */}
+        <Box sx={{ display: { xs: 'block', lg: 'none' }, pb: 2 }}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<i className="bx-cog" style={{ fontSize: '14px' }} />}
+            onClick={handleFiltersChipClick}
+            sx={{
+              minWidth: 'auto',
+              px: 2,
+              py: 0.75,
+              borderRadius: 3,
+              fontSize: '13px',
+              fontWeight: 500,
+              textTransform: 'none',
+              border: '1px solid #ECECEC',
+              bgcolor: 'background.paper',
+              color: 'text.primary',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.15s ease',
+              '&:hover': {
+                borderColor: 'primary.main',
+                bgcolor: 'action.hover'
+              },
+              '&:active': {
+                transform: 'scale(0.995)',
+                borderColor: 'primary.dark'
+              }
+            }}
+          >
+            Фильтры
+            {(() => {
+              let activeCount = 0
+              if (filters.status !== 'all') activeCount++
+              if (searchValue !== '') activeCount++
+              return activeCount > 0 ? (
+                <Box
+                  component="span"
+                  sx={{
+                    ml: 1,
+                    px: 0.75,
+                    py: 0.25,
+                    bgcolor: 'primary.main',
+                    color: 'white',
+                    borderRadius: '50%',
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    minWidth: 16,
+                    height: 16,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  {activeCount}
+                </Box>
+              ) : null
+            })()}
+          </Button>
         </Box>
       </Box>
 
-      {/* Main Content Card with improved spacing */}
-      <Card sx={{ mt: 4, mb: 6 }}>
-        <TableContainer
-          component={Paper}
-          variant="outlined"
-          className="scrollbar-thin scrollbar-thumb-[#4c4c4c]/70"
+      {/* Desktop Status Filter */}
+      <Box sx={{
+        display: { xs: 'none', lg: 'flex' },
+        alignItems: 'center',
+        gap: 2,
+        mb: 3
+      }}>
+        <Typography
+          variant="body2"
           sx={{
-            maxHeight: 'calc(100vh - 320px)',
-            minHeight: 400,
-            border: 'none'
+            fontSize: '14px',
+            fontWeight: 500,
+            color: 'text.primary',
+            minWidth: 'auto'
           }}
         >
-          <Table stickyHeader>
-            {/* Aviasales 2025 Header */}
-            <TableHead>
-              <TableRow
-                sx={{
-                  '& .MuiTableCell-head': {
-                    borderBottom: `1px solid ${theme.palette.divider}`,
-                    bgcolor: 'background.paper',
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 9
-                  }
-                }}
-              >
-                {/* № */}
-                <TableCell
-                  className="w-[80px] text-center"
-                  sx={{ px: 2, py: 2 }}
-                >
-                  <Typography className="text-xs text-gray-400 uppercase font-medium">
-                    №
+          Статус:
+        </Typography>
+        <FormControl size="small" sx={{ minWidth: 180 }}>
+          <Select
+            value={filters.status}
+            displayEmpty
+            onChange={(e) => {
+              setFilter('status', e.target.value)
+              setPage(0) // Reset to first page when status filter changes
+            }}
+            aria-label="Статус заказа"
+            sx={{
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'divider'
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'text.secondary'
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'primary.main'
+              },
+              '& .MuiSelect-select': {
+                color: 'text.primary',
+                display: 'flex',
+                alignItems: 'center',
+                py: 1
+              },
+              '& .MuiSelect-icon': {
+                color: 'text.secondary'
+              }
+            }}
+            renderValue={(selected) => {
+              if (!selected || selected === 'all') {
+                return (
+                  <Typography sx={{ color: 'text.secondary', fontSize: '14px' }}>
+                    Все статусы
                   </Typography>
-                </TableCell>
-
-                {/* Дата */}
-                <TableCell
-                  className="w-[100px]"
-                  sx={{ px: 2, py: 2 }}
-                >
-                  <TableSortLabel
-                    active={orderBy === 'orderDate'}
-                    direction={orderBy === 'orderDate' ? orderDirection : 'asc'}
-                    onClick={() => handleRequestSort('orderDate')}
-                    className="text-xs text-gray-400 uppercase font-medium"
+                )
+              }
+              const config = getStatusConfig(selected)
+              return (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box
                     sx={{
-                      '&:hover': {
-                        color: 'primary.main'
-                      },
-                      '&.Mui-active': {
-                        color: 'primary.main'
-                      }
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      bgcolor: config.color
                     }}
-                  >
-                    Дата
-                  </TableSortLabel>
-                </TableCell>
-
-                {/* Клиент */}
-                <TableCell
-                  className="flex-1"
-                  sx={{ px: 2, py: 2 }}
-                >
-                  <TableSortLabel
-                    active={orderBy === 'customerName'}
-                    direction={orderBy === 'customerName' ? orderDirection : 'asc'}
-                    onClick={() => handleRequestSort('customerName')}
-                    className="text-xs text-gray-400 uppercase font-medium"
-                    sx={{
-                      '&:hover': {
-                        color: 'primary.main'
-                      },
-                      '&.Mui-active': {
-                        color: 'primary.main'
-                      }
-                    }}
-                  >
-                    Клиент
-                  </TableSortLabel>
-                </TableCell>
-
-                {/* Товары */}
-                <TableCell
-                  className="flex-1"
-                  sx={{ px: 2, py: 2 }}
-                >
-                  <Typography className="text-xs text-gray-400 uppercase font-medium">
-                    Товары
-                  </Typography>
-                </TableCell>
-
-                {/* Статус */}
-                <TableCell
-                  className="w-[120px] text-center"
-                  sx={{ px: 2, py: 2 }}
-                >
-                  <Typography className="text-xs text-gray-400 uppercase font-medium">
-                    Статус
-                  </Typography>
-                </TableCell>
-
-                {/* Сумма */}
-                <TableCell
-                  className="w-[100px] text-right"
-                  sx={{ px: 2, py: 2 }}
-                >
-                  <TableSortLabel
-                    active={orderBy === 'total'}
-                    direction={orderBy === 'total' ? orderDirection : 'asc'}
-                    onClick={() => handleRequestSort('total')}
-                    className="text-xs text-gray-400 uppercase font-medium"
-                    sx={{
-                      '&:hover': {
-                        color: 'primary.main'
-                      },
-                      '&.Mui-active': {
-                        color: 'primary.main'
-                      }
-                    }}
-                  >
-                    Сумма ₽
-                  </TableSortLabel>
-                </TableCell>
-
-                {/* Действие + Settings */}
-                <TableCell
-                  className="w-[48px] text-center"
-                  sx={{ px: 1, py: 2 }}
-                >
-                  <ColumnSettingsPopover
-                    columns={columnConfigs}
-                    onColumnToggle={handleColumnToggle}
                   />
-                </TableCell>
-              </TableRow>
-            </TableHead>
+                  <Typography sx={{ fontSize: '14px' }}>{config.label}</Typography>
+                </Box>
+              )
+            }}
+          >
+            <MenuItem value="all">
+              <Typography sx={{ color: 'text.secondary', fontSize: '14px' }}>
+                Все статусы
+              </Typography>
+            </MenuItem>
+            {['processing', 'shipped', 'unpaid', 'cancelled'].map((status) => {
+              const config = getStatusConfig(status)
+              return (
+                <MenuItem
+                  key={status}
+                  value={status}
+                  sx={{ color: config.color }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box
+                      sx={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        bgcolor: config.color
+                      }}
+                    />
+                    <Typography sx={{ fontSize: '14px' }}>{config.label}</Typography>
+                  </Box>
+                </MenuItem>
+              )
+            })}
+          </Select>
+                </FormControl>
 
-            {/* Table Body with Aviasales 2025 improvements */}
-            <TableBody>
-              {loading ? (
-                renderSkeletonRows()
-              ) : paginatedOrders.length === 0 ? (
-                renderEmptyState()
-              ) : (
-                paginatedOrders.map((order, index) => (
-                  <TableRow
-                    key={order.id}
-                    className={`min-h-[56px] cursor-pointer transition-colors duration-100 ${
-                      index % 2 === 0 ? 'bg-level-1' : 'bg-level-2'
-                    }`}
-                    sx={{
-                      lineHeight: 1.5,
-                      '& .MuiTableCell-root': {
-                        borderBottom: `1px solid ${theme.palette.divider}`,
-                        py: 2,
-                        px: 2
-                      },
-                      '&:hover': {
-                        bgcolor: 'rgba(255, 255, 255, 0.03)',
-                        '& .status-chip': {
-                          bgcolor: 'rgba(var(--status-color), 0.2)'
-                        },
-                        '& .action-button': {
-                          opacity: 0.9
-                        }
-                      }
+        {/* Search Field */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontSize: '14px',
+              fontWeight: 500,
+              color: 'text.primary',
+              minWidth: 'auto'
+            }}
+          >
+            Поиск:
+          </Typography>
+          <CustomTextField
+            size="small"
+            placeholder="Поиск клиента..."
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            aria-label="Поиск клиента"
+            sx={{
+              minWidth: 200,
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: 'divider'
+                },
+                '&:hover fieldset': {
+                  borderColor: 'text.secondary'
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: 'primary.main'
+                }
+              },
+              '& .MuiOutlinedInput-input': {
+                color: 'text.primary',
+                fontSize: '14px',
+                '&::placeholder': {
+                  color: 'text.secondary',
+                  opacity: 0.7
+                }
+              }
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <i
+                    className="bx-search"
+                    style={{
+                      color: theme.palette.text.secondary,
+                      fontSize: '16px'
                     }}
-                  >
-                    {/* № */}
-                    <TableCell className="w-[80px] text-center">
-                      <Typography className="text-sm text-gray-400 font-mono">
-                        #{order.externalId}
-                      </Typography>
-                    </TableCell>
+                  />
+                </InputAdornment>
+              )
+            }}
+          />
+        </Box>
 
-                    {/* Дата */}
-                    <TableCell className="w-[100px]">
-                      <Typography className="text-sm text-gray-400 text-right">
-                        {formatDate(order.orderDate)}
-                      </Typography>
-                    </TableCell>
+        {/* Reset Filter Button */}
+        {(filters.status !== 'all' || searchValue !== '') && (
+          <Button
+            variant="text"
+            size="small"
+            onClick={() => {
+              setFilter('status', 'all')
+              setSearchValue('')
+              setPage(0) // Reset to first page when filters reset
+              setSnackbar({
+                open: true,
+                message: 'Фильтры сброшены',
+                severity: 'info'
+              })
+            }}
+            sx={{
+              color: 'text.secondary',
+              fontSize: '13px',
+              textTransform: 'none',
+              minWidth: 'auto',
+              px: 1.5,
+              '&:hover': {
+                color: 'primary.main',
+                bgcolor: 'action.hover'
+              }
+            }}
+          >
+            Сбросить фильтры
+          </Button>
+        )}
+      </Box>
 
-                    {/* Клиент */}
-                    <TableCell className="flex-1">
-                      <Typography className="text-sm font-medium text-white line-clamp-1">
-                        {order.customerName || 'Не указан'}
-                      </Typography>
-                      {order.customerEmail && (
-                        <Typography className="text-xs text-gray-400 line-clamp-1">
-                          {order.customerEmail}
-                        </Typography>
-                      )}
-                    </TableCell>
+      {/* Mobile Cards */}
+      {isMobile && renderMobileCards()}
 
-                    {/* Товары */}
-                    <TableCell className="flex-1">
-                      <Typography className="text-sm text-gray-300 line-clamp-1">
-                        {order.items.length === 1
-                          ? order.items[0].name
-                          : `${order.items[0].name} +${order.items.length - 1}`
+      {/* Desktop Table */}
+      <Box className="hidden lg:block">
+        <Paper
+          elevation={1}
+          sx={{
+            borderRadius: 2,
+            overflow: 'hidden'
+          }}
+        >
+          <TableContainer
+            sx={{
+              maxHeight: 'calc(100vh - 350px)',
+              minHeight: 400
+            }}
+          >
+            <Table stickyHeader>
+              {/* Enhanced Header */}
+              <TableHead>
+                <TableRow
+                  sx={{
+                    '& .MuiTableCell-head': {
+                      backgroundColor: 'background.paper',
+                      borderBottom: `1px solid ${theme.palette.divider}`,
+                      py: 2,
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: 'text.secondary',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
+                    }
+                  }}
+                >
+                  {/* № */}
+                  <TableCell sx={{ width: 80, textAlign: 'center' }}>
+                    №
+                  </TableCell>
+
+                  {/* Дата */}
+                  <TableCell sx={{ width: 120 }}>
+                    <TableSortLabel
+                      active={orderBy === 'orderDate'}
+                      direction={orderBy === 'orderDate' ? orderDirection : 'asc'}
+                      onClick={() => handleRequestSort('orderDate')}
+                      sx={{
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        '&:hover': {
+                          color: 'primary.main'
+                        },
+                        '&.Mui-active': {
+                          color: 'primary.main'
                         }
-                      </Typography>
-                    </TableCell>
+                      }}
+                    >
+                      Дата
+                    </TableSortLabel>
+                  </TableCell>
 
-                    {/* Статус */}
-                    <TableCell className="w-[120px] text-center">
-                      {(() => {
-                        const config = getStatusConfig(order.status)
-                        return (
-                          <Chip
-                            label={config.label}
-                            size="small"
-                            className={`status-chip ${config.className} text-xs font-medium px-3 py-0.5 rounded-full border-2`}
+                  {/* Клиент */}
+                  <TableCell>
+                    <TableSortLabel
+                      active={orderBy === 'customerName'}
+                      direction={orderBy === 'customerName' ? orderDirection : 'asc'}
+                      onClick={() => handleRequestSort('customerName')}
+                      sx={{
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        '&:hover': {
+                          color: 'primary.main'
+                        },
+                        '&.Mui-active': {
+                          color: 'primary.main'
+                        }
+                      }}
+                    >
+                      Клиент
+                    </TableSortLabel>
+                  </TableCell>
+
+                  {/* Товары */}
+                  <TableCell>
+                    Товары
+                  </TableCell>
+
+                  {/* Статус */}
+                  <TableCell sx={{ width: 140, textAlign: 'center' }}>
+                    Статус
+                  </TableCell>
+
+                  {/* Сумма */}
+                  <TableCell sx={{ width: 120, textAlign: 'right' }}>
+                    <TableSortLabel
+                      active={orderBy === 'total'}
+                      direction={orderBy === 'total' ? orderDirection : 'asc'}
+                      onClick={() => handleRequestSort('total')}
+                      sx={{
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        '&:hover': {
+                          color: 'primary.main'
+                        },
+                        '&.Mui-active': {
+                          color: 'primary.main'
+                        }
+                      }}
+                    >
+                      Сумма
+                    </TableSortLabel>
+                  </TableCell>
+
+                  {/* Действие */}
+                  <TableCell sx={{ width: 60, textAlign: 'center' }}>
+                    <IconButton
+                      size="small"
+                      sx={{
+                        color: 'text.secondary',
+                        '&:hover': {
+                          bgcolor: 'action.hover'
+                        }
+                      }}
+                      aria-label="Настройки таблицы"
+                    >
+                      <i className="bx-cog text-base" />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+
+            {/* Enhanced Table Body with modern styling */}
+            <TableBody>
+              <AnimatePresence>
+                {loading ? (
+                  renderSkeletonRows()
+                ) : paginatedOrders.length === 0 ? (
+                  renderEmptyState()
+                ) : (
+                  paginatedOrders.map((order, index) => {
+                    // Получаем статус для MUI Chip
+                    const getChipProps = (status: string) => {
+                      const statusMap = {
+                        processing: { color: 'primary' as const, label: 'Обрабатывается' },
+                        shipped: { color: 'success' as const, label: 'Отправлен' },
+                        unpaid: { color: 'warning' as const, label: 'Не оплачен' },
+                        cancelled: { color: 'error' as const, label: 'Отменён' },
+                        overdue: { color: 'warning' as const, label: 'Просрочен' }
+                      }
+                      return statusMap[status as keyof typeof statusMap] || { color: 'default' as const, label: status }
+                    }
+
+                    return (
+                      <TableRow
+                        key={order.id}
+                        component={motion.tr}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.2, ease: 'easeOut', delay: index * 0.02 }}
+                        onClick={() => handleOrderClick(order.id)}
+                        sx={{
+                          cursor: 'pointer',
+                          backgroundColor: index % 2 === 0 ? 'background.default' : 'background.paper',
+                          '&:hover': {
+                            backgroundColor: 'action.hover'
+                          },
+                          transition: 'background-color 0.15s ease'
+                        }}
+                      >
+                        {/* № */}
+                        <TableCell sx={{ py: 2.5, textAlign: 'center' }}>
+                          <Typography
+                            variant="body2"
                             sx={{
-                              minHeight: 24,
-                              '& .MuiChip-label': {
-                                px: 1.5,
-                                py: 0.25
+                              fontFamily: 'monospace',
+                              fontWeight: 600,
+                              color: 'primary.main',
+                              fontSize: '14px'
+                            }}
+                          >
+                            #{order.externalId}
+                          </Typography>
+                        </TableCell>
+
+                        {/* Дата */}
+                        <TableCell sx={{ py: 2.5 }}>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontFamily: 'monospace',
+                              fontSize: '14px',
+                              color: 'text.secondary'
+                            }}
+                          >
+                            {formatDate(order.orderDate)}
+                          </Typography>
+                        </TableCell>
+
+                        {/* Клиент */}
+                        <TableCell sx={{ py: 2.5, maxWidth: 200 }}>
+                          <Box>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontWeight: 500,
+                                fontSize: '14px',
+                                color: 'text.primary',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              {order.customerName || 'Не указан'}
+                            </Typography>
+                            {order.customerEmail && (
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  color: 'text.secondary',
+                                  fontSize: '12px',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  display: 'block'
+                                }}
+                              >
+                                {order.customerEmail}
+                              </Typography>
+                            )}
+                          </Box>
+                        </TableCell>
+
+                        {/* Товары */}
+                        <TableCell sx={{ py: 2.5, maxWidth: 300 }}>
+                          {order.items.length === 1 ? (
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontSize: '14px',
+                                color: 'text.secondary',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              {order.items[0].name.length > 30
+                                ? `${order.items[0].name.substring(0, 30)}...`
+                                : order.items[0].name
                               }
+                            </Typography>
+                          ) : (
+                            <Box>
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  fontSize: '14px',
+                                  fontWeight: 500,
+                                  color: 'text.primary',
+                                  lineHeight: 1.2
+                                }}
+                              >
+                                                                 {order.items.length} {(() => {
+                                   const count = order.items.length
+                                   if (count % 10 === 1 && count % 100 !== 11) return 'товар'
+                                   if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return 'товара'
+                                   return 'товаров'
+                                 })()}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  fontSize: '12px',
+                                  color: 'text.secondary',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  display: 'block',
+                                  lineHeight: 1.3
+                                }}
+                              >
+                                {(() => {
+                                  const productNames = order.items.map(item => item.name).join(', ')
+                                  return productNames.length > 35 ? `${productNames.substring(0, 35)}...` : productNames
+                                })()}
+                              </Typography>
+                            </Box>
+                          )}
+                        </TableCell>
+
+                        {/* Статус */}
+                        <TableCell sx={{ py: 2.5, textAlign: 'center' }}>
+                          <Chip
+                            label={getChipProps(order.status).label}
+                            color={getChipProps(order.status).color}
+                            variant="outlined"
+                            size="small"
+                            sx={{
+                              fontSize: '12px',
+                              fontWeight: 500,
+                              height: 24
                             }}
                           />
-                        )
-                      })()}
-                    </TableCell>
+                        </TableCell>
 
-                    {/* Сумма */}
-                    <TableCell className="w-[100px] text-right">
-                      <Typography className="text-sm font-semibold text-white font-mono">
-                        {formatCurrency(order.total)}
-                      </Typography>
-                    </TableCell>
+                        {/* Сумма */}
+                        <TableCell sx={{ py: 2.5, textAlign: 'right' }}>
+                          <Typography
+                            variant="body2"
+                            onClick={(e) => handleCopyAmount(order.total, e)}
+                            sx={{
+                              fontFamily: 'monospace',
+                              fontWeight: 600,
+                              fontSize: '14px',
+                              color: 'text.primary',
+                              cursor: 'pointer',
+                              '&:hover': {
+                                color: 'primary.main'
+                              },
+                              transition: 'color 0.15s ease'
+                            }}
+                            title="Нажмите, чтобы скопировать"
+                          >
+                            {formatCurrency(order.total)}
+                          </Typography>
+                        </TableCell>
 
-                    {/* Действие */}
-                    <TableCell className="w-[48px] text-center">
-                      <IconButton
-                        size="small"
-                        color="secondary"
-                        onClick={() => handleOrderClick(order.id)}
-                        className="action-button opacity-60 hover:opacity-80 hover:bg-level-3/30 rounded-full"
-                        sx={{ p: 1 }}
-                        aria-label={`Открыть детали заказа #${order.externalId}`}
-                      >
-                        <i className="bx-show text-base" />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                        {/* Действие */}
+                        <TableCell sx={{ py: 2.5, textAlign: 'center' }}>
+                          <motion.div
+                            whileHover={{ scale: 1.1 }}
+                            transition={{ duration: 0.15 }}
+                          >
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleOrderClick(order.id)
+                              }}
+                              sx={{
+                                color: 'text.secondary',
+                                '&:hover': {
+                                  bgcolor: 'action.hover',
+                                  color: 'primary.main'
+                                }
+                              }}
+                              aria-label={`Открыть детали заказа #${order.externalId}`}
+                            >
+                              <i className="bx-show text-base" />
+                            </IconButton>
+                          </motion.div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </AnimatePresence>
+                          </TableBody>
+            </Table>
+          </TableContainer>
 
-        {/* Aviasales 2025 Pagination */}
-        <Box className="flex items-center justify-between px-4 py-3 border-t border-muted/20">
+        {/* Enhanced Pagination */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            px: 3,
+            py: 2,
+            borderTop: `1px solid ${theme.palette.divider}`,
+            bgcolor: 'background.paper'
+          }}
+        >
           {/* Left: Rows per page */}
-          <Box className="flex items-center gap-3">
-            <Typography className="text-sm text-gray-400">
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               Строк на странице:
             </Typography>
             <FormControl size="small">
               <Select
                 value={rowsPerPage}
                 onChange={handleChangeRowsPerPage}
-                className="w-[80px] text-sm"
                 sx={{
+                  minWidth: 70,
                   '& .MuiSelect-select': {
                     py: 0.5,
-                    px: 1.5
+                    px: 1.5,
+                    fontSize: '14px'
                   }
                 }}
               >
-                <MenuItem value={10}>10</MenuItem>
                 <MenuItem value={25}>25</MenuItem>
                 <MenuItem value={50}>50</MenuItem>
+                <MenuItem value={100}>100</MenuItem>
               </Select>
             </FormControl>
           </Box>
 
           {/* Right: Pagination info and controls */}
-          <Box className="flex items-center gap-4">
-            <Typography className="text-sm text-gray-400">
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               {`${page * rowsPerPage + 1}—${Math.min((page + 1) * rowsPerPage, filteredOrders.length)} из ${filteredOrders.length}`}
             </Typography>
 
-            <Box className="flex items-center gap-1">
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               <IconButton
                 size="small"
                 disabled={page === 0}
                 onClick={() => handleChangePage(null, page - 1)}
-                className="hover:bg-level-2/30 rounded-full"
-                sx={{ opacity: page === 0 ? 0.5 : 1 }}
+                sx={{
+                  color: 'text.secondary',
+                  opacity: page === 0 ? 0.5 : 1,
+                  '&:hover': {
+                    bgcolor: 'action.hover'
+                  },
+                  '&:disabled': {
+                    opacity: 0.3
+                  }
+                }}
               >
                 <i className="bx-chevron-left text-lg" />
               </IconButton>
@@ -826,105 +1464,411 @@ const AviasalesOrdersTable = () => {
                 size="small"
                 disabled={page >= Math.ceil(filteredOrders.length / rowsPerPage) - 1}
                 onClick={() => handleChangePage(null, page + 1)}
-                className="hover:bg-level-2/30 rounded-full"
-                sx={{ opacity: page >= Math.ceil(filteredOrders.length / rowsPerPage) - 1 ? 0.5 : 1 }}
+                sx={{
+                  color: 'text.secondary',
+                  opacity: page >= Math.ceil(filteredOrders.length / rowsPerPage) - 1 ? 0.5 : 1,
+                  '&:hover': {
+                    bgcolor: 'action.hover'
+                  },
+                  '&:disabled': {
+                    opacity: 0.3
+                  }
+                }}
               >
                 <i className="bx-chevron-right text-lg" />
               </IconButton>
             </Box>
           </Box>
         </Box>
-      </Card>
+        </Paper>
+      </Box>
 
-      {/* Mobile Filters Popover */}
-      <Popover
-        open={Boolean(filtersPopover)}
-        anchorEl={filtersPopover}
-        onClose={handleFiltersClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right'
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right'
-        }}
-        PaperProps={{
-          className: "bg-level-2 rounded-lg shadow-lg",
+      {/* Premium Mobile Filters Bottom Sheet */}
+      <SwipeableDrawer
+        anchor="bottom"
+        open={filtersBottomSheet}
+        onClose={() => setFiltersBottomSheet(false)}
+        onOpen={() => setFiltersBottomSheet(true)}
+        disableSwipeToOpen={false}
+        swipeAreaWidth={20}
+        role="dialog"
+        aria-label="Фильтры заказов"
+        aria-modal="true"
+        ModalProps={{
+          keepMounted: true,
           sx: {
-            minWidth: 300,
-            p: 3
+            '& .MuiBackdrop-root': {
+              backgroundColor: 'rgba(0, 0, 0, 0.45)',
+              backdropFilter: 'blur(4px)'
+            }
           }
         }}
+        PaperProps={{
+          sx: {
+            maxHeight: { xs: '50vh', md: '40vh' },
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            backgroundColor: 'background.paper',
+            backgroundImage: 'none',
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0px -8px 24px rgba(0, 0, 0, 0.6)'
+              : '0px -8px 24px rgba(0, 0, 0, 0.15)',
+            border: '1px solid',
+            borderColor: 'divider',
+            transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+            overflow: 'hidden'
+          }
+        }}
+        SwipeAreaProps={{
+          style: { top: 'unset' }
+        }}
       >
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          Фильтры
-        </Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: 'auto' }}>
+          {/* Enhanced Drag Handle */}
+          <Box
+            sx={{
+              width: 60,
+              height: 6,
+              bgcolor: theme.palette.mode === 'dark'
+                ? 'rgba(255, 255, 255, 0.12)'
+                : 'rgba(0, 0, 0, 0.12)',
+              borderRadius: 4,
+              mx: 'auto',
+              mt: 1
+            }}
+            aria-hidden="true"
+          />
 
-        <Box className="space-y-4">
-          <FormControl fullWidth size="small">
-            <Typography className="text-sm text-gray-400 mb-1">Статус</Typography>
-            <Select
-              value={filters.status}
-              onChange={(e) => setFilter('status', e.target.value)}
-              className="bg-level-3 border border-muted/20 rounded-md"
-            >
-              <MenuItem value="all">Все статусы</MenuItem>
-              {['shipped', 'cancelled', 'overdue', 'processing', 'unpaid'].map((status) => {
-                const config = getStatusConfig(status)
-                return (
-                  <MenuItem key={status} value={status}>
-                    <Box className="flex items-center gap-2">
-                      <Box
-                        sx={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          bgcolor: config.dotColor
-                        }}
-                      />
-                      {config.label}
-                    </Box>
-                  </MenuItem>
-                )
-              })}
-            </Select>
-          </FormControl>
+          {/* Premium Header */}
+          <Box
+            sx={{
+              bgcolor: 'background.paper',
+              backdropFilter: 'blur(8px)',
+              borderBottom: '1px solid',
+              borderBottomColor: 'divider',
+              position: 'sticky',
+              top: 0,
+              zIndex: 10,
+              px: 3,
+              py: 2.5
+            }}
+          >
+            <Box className="flex items-center justify-between">
+              {/* Title */}
+              <Typography
+                variant="h6"
+                sx={{
+                  fontSize: '18px',
+                  fontWeight: 600,
+                  color: 'text.primary',
+                  flex: 1
+                }}
+              >
+                Фильтры
+              </Typography>
 
-          <Box>
-            <Typography className="text-sm text-gray-400 mb-1">Клиент</Typography>
-            <CustomTextField
-              fullWidth
-              size="small"
-              placeholder="Поиск клиента..."
-              value={filters.customer}
-              onChange={(e) => setFilter('customer', e.target.value)}
-              className="bg-level-3 border border-muted/20 rounded-md"
-            />
+              {/* Close Button */}
+              <IconButton
+                size="small"
+                onClick={() => setFiltersBottomSheet(false)}
+                aria-label="Закрыть фильтры"
+                sx={{
+                  color: 'text.secondary',
+                  '&:hover': {
+                    bgcolor: 'action.hover',
+                    borderRadius: '50%'
+                  }
+                }}
+              >
+                <i className="bx-x text-xl" />
+              </IconButton>
+            </Box>
+
+            {/* Swipe Hint */}
+            <Box className="flex items-center justify-center mt-2">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                  opacity: 0.7,
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5
+                }}
+              >
+                <i className="bx-chevron-down text-sm" />
+                Потяните вниз или тапните вне окна
+              </Typography>
+            </Box>
           </Box>
 
-          <Divider sx={{ my: 2 }} />
+                    {/* Scrollable Content */}
+          <Box sx={{
+            overflowY: 'auto',
+            px: 3,
+            py: 2,
+            pb: 'calc(env(safe-area-inset-bottom) + 12px)',
+            maxHeight: 'calc(100% - 120px)' // Резервируем место для header и handle
+                      }}>
+              <Stack spacing={2.5}>
+                              {/* Status Filter Card */}
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, delay: 0.1 }}
+                >
+                  <Box
+                    sx={{
+                      bgcolor: 'background.paper',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: 2,
+                      p: 2.5,
+                      boxShadow: theme.palette.mode === 'dark'
+                        ? '0 1px 3px rgba(0,0,0,0.3)'
+                        : '0 1px 3px rgba(0,0,0,0.05)'
+                    }}
+                  >
+                  <Typography
+                    sx={{
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      color: 'text.primary',
+                      mb: 2
+                    }}
+                  >
+                    Выберите статус
+                  </Typography>
+                  <Select
+                    fullWidth
+                    value={filters.status}
+                    displayEmpty
+                    onChange={(e) => setFilter('status', e.target.value)}
+                    aria-label="Статус заказа"
+                    sx={{
+                      height: 44,
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'divider'
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'text.secondary'
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'primary.main'
+                      },
+                      '& .MuiSelect-select': {
+                        color: 'text.primary',
+                        display: 'flex',
+                        alignItems: 'center'
+                      },
+                      '& .MuiSelect-icon': {
+                        color: 'text.secondary'
+                      }
+                    }}
+                    renderValue={(selected) => {
+                      if (!selected || selected === 'all') {
+                        return <Typography sx={{ color: 'text.secondary' }}>Все статусы</Typography>
+                      }
+                      const config = getStatusConfig(selected)
+                      return (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Box
+                            sx={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              bgcolor: config.color
+                            }}
+                          />
+                          {config.label}
+                        </Box>
+                      )
+                    }}
+                  >
+                    <MenuItem value="all">
+                      <Typography sx={{ color: 'text.secondary' }}>Все статусы</Typography>
+                    </MenuItem>
+                    {['shipped', 'cancelled', 'overdue', 'processing', 'unpaid'].map((status) => {
+                      const config = getStatusConfig(status)
+                      return (
+                        <MenuItem
+                          key={status}
+                          value={status}
+                          sx={{ color: config.color }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box
+                              sx={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: '50%',
+                                bgcolor: config.color
+                              }}
+                            />
+                            {config.label}
+                          </Box>
+                        </MenuItem>
+                      )
+                    })}
+                  </Select>
+                </Box>
+              </motion.div>
 
-          <Box className="flex gap-2">
-            {(filters.status !== 'all' || filters.customer !== '') && (
-              <Button
-                variant="text"
-                onClick={resetFilters}
-                className="flex-1"
+                              {/* Customer Search Card */}
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, delay: 0.2 }}
+                >
+                  <Box
+                    sx={{
+                      background: 'background.paper',
+                      border: '1px solid rgba(0,0,0,0.08)',
+                      borderRadius: 2,
+                      p: 2.5,
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                    }}
+                  >
+                  <Typography
+                    sx={{
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      color: 'text.primary',
+                      mb: 2
+                    }}
+                  >
+                    Поиск клиента
+                  </Typography>
+                  <CustomTextField
+                    fullWidth
+                    placeholder="Введите имя клиента"
+                    value={searchValue}
+                    onChange={(e) => setSearchValue(e.target.value)}
+                    aria-label="Поиск клиента"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <i className="bx-search" style={{ color: 'rgba(0,0,0,0.54)', fontSize: '1.2rem' }} />
+                        </InputAdornment>
+                      )
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        height: 44,
+                        '& fieldset': {
+                          borderColor: 'rgba(0, 0, 0, 0.12)'
+                        },
+                        '&:hover fieldset': {
+                          borderColor: 'rgba(0, 0, 0, 0.25)'
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#696CFF'
+                        }
+                      },
+                      '& .MuiOutlinedInput-input': {
+                        color: 'text.primary',
+                        '&::placeholder': {
+                          color: 'text.secondary',
+                          opacity: 0.7
+                        }
+                      }
+                    }}
+                  />
+                </Box>
+              </motion.div>
+
+              {/* Action Buttons */}
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: 0.3 }}
               >
-                Сбросить
-              </Button>
-            )}
-            <Button
-              variant="contained"
-              onClick={handleFiltersClose}
-              className="flex-1"
-            >
-              Применить
-            </Button>
+                <Box className="flex gap-3 pt-2">
+                  {/* Reset Button */}
+                  {(filters.status !== 'all' || searchValue !== '') && (
+                    <Button
+                      variant="text"
+                      onClick={() => {
+                        resetFilters()
+                        setSearchValue('')
+                        setSnackbar({
+                          open: true,
+                          message: 'Фильтры сброшены',
+                          severity: 'info'
+                        })
+                      }}
+                      sx={{
+                        color: '#FF4B4B',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        textTransform: 'none',
+                        px: 3,
+                        py: 1.5,
+                        borderRadius: 2,
+                        '&:hover': {
+                          bgcolor: 'rgba(255, 75, 75, 0.1)'
+                        }
+                      }}
+                      aria-disabled={filters.status === 'all' && searchValue === ''}
+                    >
+                      Сбросить
+                    </Button>
+                  )}
+
+                  {/* Apply Button */}
+                                      <Button
+                      variant="contained"
+                      onClick={() => {
+                        setFiltersBottomSheet(false)
+                        setSnackbar({
+                          open: true,
+                          message: 'Фильтры применены',
+                          severity: 'success'
+                        })
+                      }}
+                      disabled={filters.status === 'all' && searchValue === ''}
+                      sx={{
+                        flex: 1,
+                        height: 48,
+                        background: filters.status === 'all' && searchValue === ''
+                          ? 'rgba(0, 0, 0, 0.12)'
+                          : '#696CFF',
+                        color: filters.status === 'all' && searchValue === ''
+                          ? 'rgba(0, 0, 0, 0.38)'
+                          : '#FFFFFF',
+                        fontSize: '16px',
+                        fontWeight: 600,
+                        textTransform: 'none',
+                        borderRadius: 2,
+                        px: 6,
+                        '&:hover': {
+                          background: filters.status === 'all' && searchValue === ''
+                            ? 'rgba(0, 0, 0, 0.12)'
+                            : 'rgba(105, 108, 255, 0.9)',
+                          transform: filters.status !== 'all' || searchValue !== '' ? 'translateY(-1px)' : 'none',
+                          boxShadow: filters.status !== 'all' || searchValue !== ''
+                            ? '0 4px 12px rgba(105, 108, 255, 0.3)'
+                            : 'none'
+                        },
+                        '&:disabled': {
+                          background: 'rgba(0, 0, 0, 0.12)',
+                          color: 'rgba(0, 0, 0, 0.38)'
+                        },
+                        transition: 'all 0.2s ease'
+                      }}
+                    aria-disabled={filters.status === 'all' && searchValue === ''}
+                  >
+                    Применить
+                  </Button>
+                </Box>
+              </motion.div>
+            </Stack>
           </Box>
         </Box>
-      </Popover>
+      </SwipeableDrawer>
+
+
 
       {/* Order Details Drawer */}
       <OrderDetailsDrawer
@@ -933,6 +1877,24 @@ const AviasalesOrdersTable = () => {
         onOpen={handleDetailsOpen}
         orderId={selectedOrderId}
       />
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        TransitionComponent={Fade}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   )
 }

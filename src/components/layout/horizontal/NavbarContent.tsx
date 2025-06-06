@@ -4,7 +4,6 @@ import { useParams } from 'next/navigation'
 
 // Third-party Imports
 import classnames from 'classnames'
-import TextField from '@mui/material/TextField'
 
 // Type Imports
 import type { Locale } from '@configs/i18n'
@@ -26,8 +25,7 @@ import { horizontalLayoutClasses } from '@layouts/utils/layoutClasses'
 import { getLocalizedUrl } from '@/utils/i18n'
 
 // Store Imports
-import { useDateRangeStore } from '@/store/dateRangeStore'
-import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
+import PremiumDateRangePicker from '@components/premium/PremiumDateRangePicker'
 
 // Vars
 const notifications: NotificationsType[] = [
@@ -82,7 +80,6 @@ const NavbarContent = () => {
   // Hooks
   const { isBreakpointReached } = useHorizontalNav()
   const { lang: locale } = useParams()
-  const { range, setRange } = useDateRangeStore()
 
   return (
     <div
@@ -99,48 +96,15 @@ const NavbarContent = () => {
       </div>
 
       <div className='flex items-center'>
-        <span style={{color: 'red', marginRight: '10px'}}>TEST DATEPICKER HERE:</span>
-        <AppReactDatepicker
-          selected={new Date()}
-          onChange={(date) => console.log('Date changed:', date)}
-        />
-        <AppReactDatepicker
-          selectsRange
-          startDate={range.start ?? undefined}
-          endDate={range.end ?? undefined}
-          onChange={(dates: [Date | null, Date | null]) => setRange({ start: dates[0], end: dates[1] })}
-          customInput={
-            <TextField
-              size="small"
-              variant="outlined"
-              value={
-                (range.start ? range.start.toLocaleDateString() : 'Начало') +
-                ' — ' +
-                (range.end ? range.end.toLocaleDateString() : 'Конец')
-              }
-              sx={{
-                minWidth: 220,
-                mr: 2,
-                background: 'rgba(35,39,47,0.9)',
-                borderRadius: 2,
-                input: { color: 'white', cursor: 'pointer' },
-                '& fieldset': { borderColor: '#333' },
-                '&:hover fieldset': { borderColor: '#DF4C9D' }
-              }}
-              InputProps={{
-                startAdornment: <i className="bx-calendar text-xl" style={{ marginRight: 8, color: '#DF4C9D' }} />,
-                readOnly: true
-              }}
-            />
-          }
-          dateFormat="dd.MM.yyyy"
-          popperPlacement="bottom-end"
+        {/* Premium Date Range Picker for Horizontal Layout */}
+        <PremiumDateRangePicker
+          sticky={false}
+          className="mr-4"
         />
         <LanguageDropdown />
         <ModeDropdown />
         <NotificationsDropdown notifications={notifications} />
         <UserDropdown />
-        {/* Language Dropdown, Notification Dropdown, quick access menu dropdown, user dropdown will be placed here */}
       </div>
     </div>
   )

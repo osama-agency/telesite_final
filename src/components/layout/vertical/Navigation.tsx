@@ -17,6 +17,7 @@ import type { Locale } from '@configs/i18n'
 import VerticalNav, { NavHeader, NavCollapseIcons } from '@menu/vertical-menu'
 import VerticalMenu from './VerticalMenu'
 import Logo from '@components/layout/shared/Logo'
+import AnimatedSidebar from './AnimatedSidebar'
 
 // Hook Imports
 import useVerticalNav from '@menu/hooks/useVerticalNav'
@@ -96,37 +97,38 @@ const Navigation = () => {
   }, [settings.layout])
 
   return (
-    // eslint-disable-next-line lines-around-comment
-    // Sidebar Vertical Menu
-    <VerticalNav
-      customStyles={navigationCustomStyles(verticalNavOptions, theme, settings)}
-      collapsedWidth={85}
-      backgroundColor='var(--mui-palette-background-paper)'
-      // eslint-disable-next-line lines-around-comment
-      // The following condition adds the data-dark attribute to the VerticalNav component
-      // when semiDark is enabled and the mode or systemMode is light
-      {...(isSemiDark &&
-        !isDark && {
-          'data-dark': ''
-        })}
-    >
-      {/* Nav Header including Logo & nav toggle icons  */}
-      <NavHeader>
-        <Link href={getLocalizedUrl('/', locale as Locale)}>
-          <Logo />
-        </Link>
-        {!(isCollapsed && !isHovered) && (
-          <NavCollapseIcons
-            lockedIcon={MenuToggle}
-            unlockedIcon={MenuToggle}
-            closeIcon={MenuToggle}
-            onClick={() => updateSettings({ layout: !isCollapsed ? 'collapsed' : 'vertical' })}
-          />
-        )}
-      </NavHeader>
-      <StyledBoxForShadow ref={shadowRef} />
-      <VerticalMenu scrollMenu={scrollMenu} />
-    </VerticalNav>
+    <AnimatedSidebar>
+      {/* Sidebar Vertical Menu */}
+      <VerticalNav
+        customStyles={navigationCustomStyles(verticalNavOptions, theme, settings)}
+        collapsedWidth={85}
+        backgroundColor='var(--mui-palette-background-paper)'
+        // eslint-disable-next-line lines-around-comment
+        // The following condition adds the data-dark attribute to the VerticalNav component
+        // when semiDark is enabled and the mode or systemMode is light
+        {...(isSemiDark &&
+          !isDark && {
+            'data-dark': ''
+          })}
+      >
+        {/* Nav Header including Logo & nav toggle icons  */}
+        <NavHeader>
+          <Link href={getLocalizedUrl('/', locale as Locale)}>
+            <Logo />
+          </Link>
+          {!(isCollapsed && !isHovered) && (
+            <NavCollapseIcons
+              lockedIcon={MenuToggle}
+              unlockedIcon={MenuToggle}
+              closeIcon={MenuToggle}
+              onClick={() => updateSettings({ layout: !isCollapsed ? 'collapsed' : 'vertical' })}
+            />
+          )}
+        </NavHeader>
+        <StyledBoxForShadow ref={shadowRef} />
+        <VerticalMenu scrollMenu={scrollMenu} />
+      </VerticalNav>
+    </AnimatedSidebar>
   )
 }
 

@@ -11,20 +11,27 @@ datasource db {
 }
 
 model Order {
-  id          String      @id @default(cuid())
-  externalId  String      @unique @map("external_id") // ID из внешнего API
-  customerName String?    @map("customer_name")
-  customerEmail String?   @map("customer_email")
-  customerPhone String?   @map("customer_phone")
-  status      String
-  total       Decimal     @db.Decimal(10, 2)
-  currency    String      @default("USD")
-  orderDate   DateTime    @map("order_date")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  id            String      @id @default(cuid())
+  externalId    String      @unique @map("external_id") // ID из внешнего API
+  customerName  String?     @map("customer_name")
+  customerEmail String?     @map("customer_email")
+  customerPhone String?     @map("customer_phone")
+  customerCity  String?     @map("customer_city")
+  customerAddress String?   @map("customer_address")
+  status        String
+  total         Decimal     @db.Decimal(10, 2)
+  currency      String      @default("RUB")
+  bankCard      String?     @map("bank_card")
+  bonus         Decimal?    @db.Decimal(10, 2) @default(0)
+  deliveryCost  Decimal?    @db.Decimal(10, 2) @default(0) @map("delivery_cost")
+  paidAt        DateTime?   @map("paid_at")
+  shippedAt     DateTime?   @map("shipped_at")
+  orderDate     DateTime    @map("order_date")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
 
   // Связь с элементами заказа
-  items       OrderItem[]
+  items         OrderItem[]
 
   @@map("orders")
 }

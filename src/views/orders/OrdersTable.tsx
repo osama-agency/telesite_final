@@ -131,7 +131,7 @@ const OrdersTable = () => {
 
   // Pagination states
   const [page, setPage] = useState(0)
-  const [rowsPerPage, setRowsPerPage] = useState(25)
+  const [rowsPerPage, setRowsPerPage] = useState(50)
 
   // Sorting states
   const [orderBy, setOrderBy] = useState<keyof OrderData>('orderDate')
@@ -143,31 +143,27 @@ const OrdersTable = () => {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('lg'))
 
-  // Get date range with fallback
-  const getDateRange = useCallback(() => {
-    if (range.start && range.end) {
-      return { start: range.start, end: range.end }
-    }
-    const today = new Date()
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(today.getDate() - 30)
-    return { start: thirtyDaysAgo, end: today }
-  }, [range.start, range.end])
+
 
   // Fetch orders from API
   const fetchOrders = useCallback(async () => {
     try {
       setLoading(true)
 
-      const { start, end } = getDateRange()
       const queryParams = new URLSearchParams({
         page: '1',
         limit: '1000',
-        dateFrom: start.toISOString().split('T')[0],
-        dateTo: end.toISOString().split('T')[0],
         sortBy: 'orderDate',
         sortOrder: 'DESC'
       })
+
+      // Добавляем фильтры по дате только если они заданы
+      if (range.start) {
+        queryParams.append('dateFrom', range.start.toISOString().split('T')[0])
+      }
+      if (range.end) {
+        queryParams.append('dateTo', range.end.toISOString().split('T')[0])
+      }
 
       const response = await fetch(`http://localhost:3010/api/orders?${queryParams}`)
 
@@ -192,7 +188,7 @@ const OrdersTable = () => {
     } finally {
       setLoading(false)
     }
-  }, [getDateRange])
+  }, [range.start, range.end])
 
   // Sync orders
   const handleSyncOrders = useCallback(async () => {

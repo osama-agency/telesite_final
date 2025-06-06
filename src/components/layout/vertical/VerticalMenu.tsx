@@ -11,7 +11,8 @@ import PerfectScrollbar from 'react-perfect-scrollbar'
 import type { VerticalMenuContextProps } from '@menu/components/vertical-menu/Menu'
 
 // Component Imports
-import { Menu, MenuItem } from '@menu/vertical-menu'
+import { Menu } from '@menu/vertical-menu'
+import AnimatedMenuItem from './AnimatedMenuItem'
 
 // Hook Imports
 import useVerticalNav from '@menu/hooks/useVerticalNav'
@@ -72,21 +73,21 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
         renderExpandedMenuItemIcon={{ icon: <i className='bx-bxs-circle' /> }}
         menuSectionStyles={menuSectionStyles(verticalNavOptions, theme)}
       >
-        <MenuItem href={`/${locale}/dashboard`} icon={<i className='bx-home-smile' />}>
+        <AnimatedMenuItem href={`/${locale}/dashboard`} icon={<i className='bx-home-smile' />}>
           Дашборд
-        </MenuItem>
-        <MenuItem href={`/${locale}/orders`} icon={<i className='bx-cart-alt' />}>
+        </AnimatedMenuItem>
+        <AnimatedMenuItem href={`/${locale}/orders`} icon={<i className='bx-cart-alt' />}>
           Заказы
-        </MenuItem>
-        <MenuItem href={`/${locale}/products`} icon={<i className='bx-package' />}>
+        </AnimatedMenuItem>
+        <AnimatedMenuItem href={`/${locale}/products`} icon={<i className='bx-package' />}>
           Товары
-        </MenuItem>
-        <MenuItem href={`/${locale}/procurement`} icon={<i className='bx-store' />}>
+        </AnimatedMenuItem>
+        <AnimatedMenuItem href={`/${locale}/procurement`} icon={<i className='bx-store' />}>
           Закупки
-        </MenuItem>
-        <MenuItem href={`/${locale}/expenses`} icon={<i className='bx-money' />}>
+        </AnimatedMenuItem>
+        <AnimatedMenuItem href={`/${locale}/expenses`} icon={<i className='bx-money' />}>
           Расходы
-        </MenuItem>
+        </AnimatedMenuItem>
       </Menu>
       {/* <Menu
         popoutMenuOffset={{ mainAxis: 27 }}

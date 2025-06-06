@@ -4,308 +4,608 @@
 import { useState, useEffect } from 'react'
 
 // MUI Imports
-import SwipeableDrawer from '@mui/material/SwipeableDrawer'
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
-import IconButton from '@mui/material/IconButton'
-import Button from '@mui/material/Button'
-import Divider from '@mui/material/Divider'
-import Skeleton from '@mui/material/Skeleton'
-import Badge from '@mui/material/Badge'
+import {
+  Drawer,
+  Box,
+  Typography,
+  IconButton,
+  Divider,
+  Chip,
+  Stack,
+  useMediaQuery,
+  useTheme
+} from '@mui/material'
 
-// Type Imports
+// Types
 interface OrderItem {
   id: string
   name: string
+  price: number
   quantity: number
-  price: string
-  total: string
 }
 
 interface Order {
   id: string
-  externalId: string
-  customerName: string
-  customerEmail: string
-  customerPhone: string
-  status: string
-  total: string
-  currency: string
-  orderDate: string
-  items: OrderItem[]
-  shippingAddress?: string
-  comment?: string
+  orderNumber?: string
+  customerName?: string
+  customerEmail?: string
+  customerPhone?: string
+  customerAddress?: string
+  customerCity?: string
+  bankCard?: string
+  totalAmount?: number
+  status?: string
+  orderDate?: string
+  paidAt?: string
+  shippedAt?: string
+  bonus?: number
+  deliveryCost?: number
+  items?: OrderItem[]
 }
 
 interface OrderDetailsDrawerProps {
   open: boolean
   onClose: () => void
-  onOpen: () => void
-  orderId: string | null
+  orderId?: string
 }
 
-// Status badge helper
-const getStatusBadge = (status: string) => {
-  const statusConfig = {
-    shipped: { label: 'Отправлен', color: 'bg-success/15 border-success/50 text-success' },
-    cancelled: { label: 'Отменен', color: 'bg-error/15 border-error/50 text-error' },
-    overdue: { label: 'Просрочен', color: 'bg-warning/15 border-warning/50 text-warning' },
-    processing: { label: 'Обрабатывается', color: 'bg-info/15 border-info/50 text-info' },
-    unpaid: { label: 'Не оплачен', color: 'bg-yellow-400/15 border-yellow-400/50 text-yellow-400' },
+// Улучшенные функции для статусов в стиле 2025
+const getStatusConfig = (status: string) => {
+  if (!status) return { color: '#888', bg: 'rgba(136, 136, 136, 0.1)', icon: '❓', label: 'Неизвестно' }
+
+  switch (status.toLowerCase()) {
+    case 'shipped':
+      return { color: '#4ade80', bg: 'rgba(74, 222, 128, 0.1)', icon: '✈️', label: 'Отправлен' }
+    case 'cancelled':
+      return { color: '#f87171', bg: 'rgba(248, 113, 113, 0.1)', icon: '❌', label: 'Отменен' }
+    case 'processing':
+      return { color: '#60a5fa', bg: 'rgba(96, 165, 250, 0.1)', icon: '⏳', label: 'В обработке' }
+    case 'unpaid':
+      return { color: '#facc15', bg: 'rgba(250, 204, 21, 0.1)', icon: '💳', label: 'Не оплачен' }
+    default:
+      return { color: '#888', bg: 'rgba(136, 136, 136, 0.1)', icon: '📋', label: status }
   }
-
-  const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.processing
-
-  return (
-    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${config.color}`}>
-      {config.label}
-    </span>
-  )
 }
 
-const OrderDetailsDrawer = ({ open, onClose, onOpen, orderId }: OrderDetailsDrawerProps) => {
-  const [orderDetails, setOrderDetails] = useState<Order | null>(null)
-  const [orderDetailsLoading, setOrderDetailsLoading] = useState(false)
-  const [expandedProducts, setExpandedProducts] = useState(false)
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'RUB'
+  }).format(price)
+}
 
-  // Mock data - replace with actual API call
-  const mockOrderDetails: Order = {
-    id: orderId || '1',
-    externalId: '1192',
-    customerName: 'Островский Данил Игоревич',
-    customerEmail: 'danil@example.com',
-    customerPhone: '+7 921 123 45 67',
-    status: 'shipped',
-    total: '6000',
-    currency: 'RUB',
-    orderDate: '2025-06-05',
-    shippingAddress: 'г. Москва, ул. Ленина, д. 10, кв. 25',
-    comment: 'Просьба доставить после 18:00. Домофон не работает, звонить по указанному телефону.',
-    items: [
-      {
-        id: '1',
-        name: 'Atomineх 25 mg',
-        quantity: 1,
-        price: '6000',
-        total: '6000'
-      },
-      {
-        id: '2',
-        name: 'Витамин D3 2000 IU',
-        quantity: 2,
-        price: '850',
-        total: '1700'
-      }
-    ]
-  }
+// Современное форматирование дат (без "г." и "в")
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).replace(' г.', '').replace(' в ', ', ')
+}
 
-  // Simulate loading when opening
+const OrderDetailsDrawer = ({ open, onClose, orderId }: OrderDetailsDrawerProps) => {
+  const [order, setOrder] = useState<Order | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Адаптивность: на мобильном снизу, на ПК справа
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+
   useEffect(() => {
     if (open && orderId) {
-      setOrderDetailsLoading(true)
-      // Simulate API call
-      setTimeout(() => {
-        setOrderDetails(mockOrderDetails)
-        setOrderDetailsLoading(false)
-      }, 800)
+      setLoading(true)
+      setError(null)
+
+      fetch(`http://localhost:3011/api/orders/${orderId}`)
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          return res.json()
+        })
+        .then(data => {
+          const orderData = data.success ? data.data.order : data
+
+          const transformedOrder = {
+            ...orderData,
+            orderNumber: orderData.externalId,
+            totalAmount: parseFloat(orderData.total),
+            bonus: parseFloat(orderData.bonus || 0),
+            deliveryCost: parseFloat(orderData.deliveryCost || 0),
+            items: orderData.items?.map((item: any) => ({
+              id: item.id,
+              name: item.name,
+              quantity: item.quantity,
+              price: parseFloat(item.price)
+            })) || []
+          }
+
+          setOrder(transformedOrder)
+        })
+        .catch(err => {
+          console.error('Ошибка загрузки заказа:', err)
+          setError('Ошибка загрузки данных заказа')
+        })
+        .finally(() => setLoading(false))
     }
   }, [open, orderId])
 
-  const handleEdit = () => {
-    // Implement edit functionality
-    console.log('Edit order:', orderId)
+  if (!open) {
+    return null
   }
 
+  if (loading) {
+    return (
+      <Drawer
+        anchor={isMobile ? "bottom" : "right"}
+        open={open}
+        onClose={onClose}
+        PaperProps={{
+          sx: {
+            ...(isMobile ? {
+              width: '100%',
+              height: 'auto',
+              maxHeight: '90vh',
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16
+            } : {
+              width: { sm: 480, md: 560, lg: 640 },
+              maxWidth: '40vw',
+              height: 'auto',
+              maxHeight: '90vh'
+            })
+          }
+        }}
+      >
+        <Box sx={{ p: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+          <Typography color="text.secondary">Загрузка...</Typography>
+        </Box>
+      </Drawer>
+    )
+  }
+
+  if (error || !order) {
+    return (
+      <Drawer
+        anchor={isMobile ? "bottom" : "right"}
+        open={open}
+        onClose={onClose}
+        PaperProps={{
+          sx: {
+            ...(isMobile ? {
+              width: '100%',
+              height: 'auto',
+              maxHeight: '90vh',
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16
+            } : {
+              width: { sm: 480, md: 560, lg: 640 },
+              maxWidth: '40vw',
+              height: 'auto',
+              maxHeight: '90vh'
+            })
+          }
+        }}
+      >
+        <Box sx={{ p: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+          <Typography color="error">{error || 'Заказ не найден'}</Typography>
+        </Box>
+      </Drawer>
+    )
+  }
+
+  const statusConfig = getStatusConfig(order.status || '')
+  const itemsTotal = (order.totalAmount || 0) - (order.deliveryCost || 0)
+
   return (
-    <SwipeableDrawer
-      anchor="bottom"
+    <Drawer
+      anchor={isMobile ? "bottom" : "right"}
       open={open}
       onClose={onClose}
-      onOpen={onOpen}
-      disableSwipeToOpen
       PaperProps={{
         sx: {
-          maxHeight: '70vh',
-          borderTopLeftRadius: 16,
-          borderTopRightRadius: 16,
-          overflow: 'visible'
-        },
-        className: 'bg-level-2 shadow-lg'
+          ...(isMobile ? {
+            width: '100%',
+            height: 'auto',
+            maxHeight: '90vh',
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            borderBottomLeftRadius: 0,
+            borderBottomRightRadius: 0
+          } : {
+            width: { sm: 480, md: 560, lg: 640 },
+            maxWidth: '40vw',
+            height: 'auto',
+            maxHeight: '90vh'
+          }),
+          background: theme.palette.background.paper
+        }
       }}
     >
-      <Box className="overflow-auto">
-        {/* Swipe Handle */}
-        <Box className="w-10 h-1 bg-muted/20 rounded-full mx-auto mt-3 mb-2" />
+      <Box sx={{
+        height: 'auto',
+        minHeight: 'fit-content',
+        maxHeight: '90vh',
+        overflow: 'auto',
+        position: 'relative',
+        // Swipe handle для мобильного
+        ...(isMobile && {
+          pt: 4,
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 8,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 40,
+            height: 4,
+            bgcolor: '#333',
+            borderRadius: 2,
+            zIndex: 1
+          }
+        })
+      }}>
+        {/* HEADER - Современный дизайн 2025 */}
+        <Box sx={{
+          p: isMobile ? 3 : 4,
+          borderBottom: '1px solid',
+          borderBottomColor: theme.palette.divider,
+          background: theme.palette.background.paper
+        }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
+            <Box sx={{ flex: 1 }}>
+              <Typography
+                variant="h5"
+                fontWeight={700}
+                color="text.primary"
+                mb={1}
+              >
+                Детали заказа
+              </Typography>
+              <Typography
+                variant="h6"
+                fontWeight={600}
+                color="text.primary"
+                mb={0.5}
+              >
+                Заказ #{order.orderNumber || order.id}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {order.orderDate ? formatDate(order.orderDate) : 'Дата не указана'}
+              </Typography>
+            </Box>
 
-        {/* Header */}
-        <Box className="flex justify-between items-center px-4 pb-4 border-b border-muted/20 mb-4">
-          {orderDetailsLoading ? (
-            <Skeleton variant="text" width={120} height={28} className="bg-muted/20" />
-          ) : (
-            <Typography variant="h6" className="text-lg font-semibold text-white">
-              Заказ #{orderDetails?.externalId}
+            <Stack direction="row" alignItems="center" gap={2}>
+              {/* Статус справа */}
+              <Chip
+                icon={<span style={{ fontSize: 14 }}>{statusConfig.icon}</span>}
+                label={statusConfig.label}
+                size="medium"
+                sx={{
+                  bgcolor: statusConfig.bg,
+                  color: statusConfig.color,
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  border: `1px solid ${statusConfig.color}40`,
+                  '& .MuiChip-icon': {
+                    color: statusConfig.color
+                  }
+                }}
+              />
+
+              <IconButton
+                onClick={onClose}
+                size="small"
+                sx={{
+                  bgcolor: theme.palette.mode === 'dark' ? '#333' : '#f5f5f5',
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' ? '#444' : '#e5e5e5'
+                  }
+                }}
+              >
+                ✕
+              </IconButton>
+            </Stack>
+          </Stack>
+
+          {/* Сумма заказа - крупно */}
+          <Box sx={{ textAlign: 'right' }}>
+            <Typography
+              variant="h3"
+              fontWeight={700}
+              sx={{
+                color: statusConfig.color,
+                lineHeight: 1
+              }}
+            >
+              {formatPrice(order.totalAmount || 0)}
             </Typography>
-          )}
-          <IconButton
-            onClick={onClose}
-            className="text-white/80 hover:text-white hover:bg-muted/10"
-            aria-label="Закрыть"
-          >
-            <i className="bx-x text-xl" />
-          </IconButton>
+          </Box>
         </Box>
 
-        <Box className="px-4 pb-6">
-          {orderDetailsLoading ? (
-            <>
-              {/* Skeleton for order info */}
-              <Box className="space-y-4 mb-6">
-                {[...Array(4)].map((_, index) => (
-                  <Skeleton key={index} variant="text" height={24} className="bg-muted/20" />
-                ))}
-              </Box>
+        {/* BODY с секциями - максимально компактные отступы */}
+        <Box sx={{
+          pt: isMobile ? 3 : 4,
+          px: isMobile ? 3 : 4,
+          pb: isMobile ? 1 : 2, // Еще более компактный нижний отступ
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 4 // Уменьшили с 6 до 4
+        }}>
 
-              {/* Skeleton for products */}
-              <Box className="mb-6">
-                <Skeleton variant="text" width={100} height={24} className="bg-muted/20 mb-3" />
-                <Box className="bg-level-3 rounded-lg p-3 shadow-xs">
-                  <Skeleton variant="text" height={20} className="bg-muted/20 mb-2" />
-                  <Skeleton variant="text" width="60%" height={16} className="bg-muted/20" />
-                </Box>
-              </Box>
-            </>
-          ) : orderDetails ? (
-            <>
-              {/* Order Info */}
-              <Box className="space-y-4 mb-6">
-                <Box className="flex justify-between items-center border-b border-muted/20 py-2">
-                  <Typography className="text-sm text-gray-400">Статус</Typography>
-                  {getStatusBadge(orderDetails.status)}
-                </Box>
+          {/* Секция: ИНФОРМАЦИЯ О КЛИЕНТЕ */}
+          <Box>
+            <Typography
+              variant="subtitle2"
+              sx={{
+                textTransform: 'uppercase',
+                fontWeight: 600,
+                fontSize: '14px',
+                color: '#888',
+                borderBottom: '1px solid',
+                borderBottomColor: theme.palette.divider,
+                pb: 1,
+                mb: 3
+              }}
+            >
+              Информация о клиенте
+            </Typography>
 
-                <Box className="flex justify-between items-center border-b border-muted/20 py-2">
-                  <Typography className="text-sm text-gray-400">Сумма</Typography>
-                  <Typography className="text-base font-medium text-white">
-                    {parseInt(orderDetails.total).toLocaleString('ru-RU')} ₽
-                  </Typography>
-                </Box>
-
-                <Box className="flex justify-between items-center border-b border-muted/20 py-2">
-                  <Typography className="text-sm text-gray-400">Дата заказа</Typography>
-                  <Typography className="text-base font-medium text-white">
-                    {new Date(orderDetails.orderDate).toLocaleDateString('ru-RU')}
-                  </Typography>
-                </Box>
-
-                <Box className="flex justify-between items-center border-b border-muted/20 py-2">
-                  <Typography className="text-sm text-gray-400">ID заказа</Typography>
-                  <Typography className="text-base font-medium text-white">
-                    #{orderDetails.externalId}
-                  </Typography>
-                </Box>
-              </Box>
-
-              {/* Customer Info */}
-              <Box className="mb-6">
-                <Typography className="text-base font-semibold text-white mb-3">Клиент</Typography>
-                <Box className="space-y-2">
-                  <Typography className="text-sm text-white/90">{orderDetails.customerName}</Typography>
-                  <Typography className="text-sm text-gray-300">{orderDetails.customerEmail}</Typography>
-                  <Typography className="text-sm text-gray-300">{orderDetails.customerPhone}</Typography>
-                  {orderDetails.shippingAddress && (
-                    <Typography className="text-sm text-gray-300">{orderDetails.shippingAddress}</Typography>
-                  )}
-                </Box>
-              </Box>
-
-              <Divider className="border-muted/20 mb-6" />
-
-              {/* Products */}
-              <Box className="mb-6">
-                <Typography className="text-base font-semibold text-white mb-3">
-                  Товары ({orderDetails.items.length})
+            <Stack spacing={2}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="body2" sx={{ color: '#888', fontWeight: 500 }}>
+                  Имя
                 </Typography>
-                <Box className="space-y-2">
-                  {/* Show first product always */}
-                  {orderDetails.items.slice(0, 1).map((item) => (
-                    <Box key={item.id} className="bg-level-3 rounded-lg p-3 shadow-xs">
-                      <Typography className="text-sm font-medium text-white mb-1">
-                        {item.name}
-                      </Typography>
-                      <Typography className="text-xs text-gray-300">
-                        {item.quantity} × {parseInt(item.price).toLocaleString('ru-RU')} ₽ = {parseInt(item.total).toLocaleString('ru-RU')} ₽
-                      </Typography>
-                    </Box>
-                  ))}
+                <Typography variant="body1" sx={{
+                  color: theme.palette.mode === 'dark' ? '#fff' : '#333',
+                  fontWeight: 500,
+                  textAlign: 'right',
+                  maxWidth: '60%'
+                }}>
+                  {order.customerName || 'Не указано'}
+                </Typography>
+              </Stack>
 
-                  {/* Show more products if expanded */}
-                  {expandedProducts && orderDetails.items.slice(1).map((item) => (
-                    <Box key={item.id} className="bg-level-3 rounded-lg p-3 shadow-xs">
-                      <Typography className="text-sm font-medium text-white mb-1">
-                        {item.name}
-                      </Typography>
-                      <Typography className="text-xs text-gray-300">
-                        {item.quantity} × {parseInt(item.price).toLocaleString('ru-RU')} ₽ = {parseInt(item.total).toLocaleString('ru-RU')} ₽
-                      </Typography>
-                    </Box>
-                  ))}
-
-                  {/* Show more button if there are multiple products */}
-                  {orderDetails.items.length > 1 && (
-                    <Button
-                      variant="text"
-                      size="small"
-                      onClick={() => setExpandedProducts(!expandedProducts)}
-                      className="text-primary hover:bg-primary/10 p-2 rounded-md text-xs"
-                    >
-                      {expandedProducts
-                        ? 'Скрыть'
-                        : `и ещё ${orderDetails.items.length - 1} товаров`
-                      }
-                    </Button>
-                  )}
-                </Box>
-              </Box>
-
-              {/* Comment */}
-              {orderDetails.comment && (
-                <Box className="mb-6">
-                  <Typography className="text-base font-semibold text-white mb-3">Комментарий</Typography>
-                  <Box className="max-h-[100px] overflow-auto bg-level-3 rounded-lg p-3">
-                    <Typography className="text-sm text-gray-300 leading-relaxed">
-                      {orderDetails.comment}
-                    </Typography>
-                  </Box>
-                </Box>
+              {order.customerEmail && (
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Typography variant="body2" sx={{ color: '#888', fontWeight: 500 }}>
+                    Email
+                  </Typography>
+                  <Typography variant="body1" sx={{
+                    color: theme.palette.mode === 'dark' ? '#fff' : '#333',
+                    fontWeight: 500,
+                    textAlign: 'right',
+                    maxWidth: '60%'
+                  }}>
+                    {order.customerEmail}
+                  </Typography>
+                </Stack>
               )}
 
-              {/* Action Buttons */}
-              <Box className="space-y-2">
-                <Button
-                  fullWidth
-                  variant="contained"
-                  onClick={handleEdit}
-                  className="w-full py-3 bg-primary hover:bg-primary/90 rounded-full font-medium mb-2 active:scale-95 transition-all duration-100"
-                  sx={{ textTransform: 'none', fontSize: '1rem' }}
-                >
-                  Редактировать
-                </Button>
+              {order.customerPhone && (
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Typography variant="body2" sx={{ color: '#888', fontWeight: 500 }}>
+                    Телефон
+                  </Typography>
+                  <Typography variant="body1" sx={{
+                    color: theme.palette.mode === 'dark' ? '#fff' : '#333',
+                    fontWeight: 500,
+                    textAlign: 'right',
+                    maxWidth: '60%'
+                  }}>
+                    {order.customerPhone}
+                  </Typography>
+                </Stack>
+              )}
 
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  onClick={onClose}
-                  className="w-full py-3 bg-muted/20 hover:bg-muted/30 border-muted/40 text-white rounded-full mb-4 active:scale-95 transition-all duration-100"
-                  sx={{ textTransform: 'none', fontSize: '1rem' }}
+              {(order.customerAddress || order.customerCity) && (
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Typography variant="body2" sx={{ color: '#888', fontWeight: 500 }}>
+                    Адрес
+                  </Typography>
+                  <Typography variant="body1" sx={{
+                    color: theme.palette.mode === 'dark' ? '#fff' : '#333',
+                    fontWeight: 500,
+                    textAlign: 'right',
+                    maxWidth: '60%'
+                  }}>
+                    {order.customerAddress || order.customerCity}
+                  </Typography>
+                </Stack>
+              )}
+
+              {order.bankCard && (
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Typography variant="body2" sx={{ color: '#888', fontWeight: 500 }}>
+                    Банковская карта
+                  </Typography>
+                  <Typography variant="body1" sx={{
+                    color: theme.palette.mode === 'dark' ? '#fff' : '#333',
+                    fontWeight: 500,
+                    textAlign: 'right',
+                    maxWidth: '60%'
+                  }}>
+                    {order.bankCard}
+                  </Typography>
+                </Stack>
+              )}
+            </Stack>
+          </Box>
+
+          {/* Секция: ТОВАРЫ */}
+          <Box>
+            <Typography
+              variant="subtitle2"
+              sx={{
+                textTransform: 'uppercase',
+                fontWeight: 600,
+                fontSize: '14px',
+                color: '#888',
+                borderBottom: '1px solid',
+                borderBottomColor: theme.palette.divider,
+                pb: 1,
+                mb: 3
+              }}
+            >
+              Товары ({(order.items || []).length})
+            </Typography>
+
+            <Stack spacing={3}>
+              {(order.items || []).map((item, index) => (
+                <Stack key={item.id || index} direction="row" justifyContent="space-between" alignItems="flex-start">
+                  <Box sx={{ flex: 1, pr: 2 }}>
+                    <Typography
+                      variant="body1"
+                      fontWeight={600}
+                      color="text.primary"
+                      mb={0.5}
+                    >
+                      {item.name}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{ color: '#888' }}
+                    >
+                      {item.quantity} шт. × {formatPrice(item.price)}
+                    </Typography>
+                  </Box>
+                  <Typography
+                    variant="body1"
+                    fontWeight={600}
+                    color="text.primary"
+                    sx={{ textAlign: 'right' }}
+                  >
+                    {formatPrice(item.quantity * item.price)}
+                  </Typography>
+                </Stack>
+              ))}
+            </Stack>
+          </Box>
+
+          {/* Секция: ИТОГО */}
+          <Box>
+            <Typography
+              variant="subtitle2"
+              sx={{
+                textTransform: 'uppercase',
+                fontWeight: 600,
+                fontSize: '14px',
+                color: '#888',
+                borderBottom: '1px solid',
+                borderBottomColor: theme.palette.divider,
+                pb: 1,
+                mb: 3
+              }}
+            >
+              Итого
+            </Typography>
+
+            <Stack spacing={1}>
+              <Stack direction="row" justifyContent="space-between">
+                <Typography variant="body1" color="text.secondary">
+                  Сумма товаров
+                </Typography>
+                <Typography variant="body1" fontWeight={500} color="text.primary">
+                  {formatPrice(itemsTotal)}
+                </Typography>
+              </Stack>
+
+              <Stack direction="row" justifyContent="space-between">
+                <Typography variant="body1" color="text.secondary">
+                  Доставка
+                </Typography>
+                <Typography variant="body1" fontWeight={500} color="text.primary">
+                  {(order.deliveryCost || 0) > 0 ? formatPrice(order.deliveryCost || 0) : 'Бесплатно'}
+                </Typography>
+              </Stack>
+
+              {(order.bonus || 0) > 0 && (
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography variant="body1" color="text.secondary">
+                    Бонусы
+                  </Typography>
+                  <Typography variant="body1" fontWeight={500} color="success.main">
+                    +{formatPrice(order.bonus || 0)}
+                  </Typography>
+                </Stack>
+              )}
+
+              <Divider sx={{ my: 2, borderColor: theme.palette.divider }} />
+
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0 }}>
+                <Typography variant="h6" fontWeight={700} color="text.primary">
+                  К оплате
+                </Typography>
+                <Typography
+                  variant="h4"
+                  fontWeight={700}
+                  sx={{
+                    color: '#4ade80',
+                    lineHeight: 1
+                  }}
                 >
-                  Закрыть
-                </Button>
-              </Box>
-            </>
-          ) : null}
+                  {formatPrice(order.totalAmount || 0)}
+                </Typography>
+              </Stack>
+            </Stack>
+          </Box>
+
+          {/* Секция: ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ */}
+          {(order.paidAt || order.shippedAt) && (
+            <Box sx={{ mb: 0 }}> {/* Убираем нижний отступ у последней секции */}
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  textTransform: 'uppercase',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  color: '#888',
+                  borderBottom: '1px solid',
+                  borderBottomColor: theme.palette.divider,
+                  pb: 1,
+                  mb: 3
+                }}
+              >
+                Дополнительная информация
+              </Typography>
+
+              <Stack spacing={2} sx={{ mb: 0 }}> {/* Убираем отступ у последнего элемента */}
+                {order.paidAt && (
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="body2" sx={{ color: '#888', fontWeight: 500 }}>
+                      Дата оплаты
+                    </Typography>
+                    <Typography variant="body1" sx={{
+                      color: theme.palette.mode === 'dark' ? '#fff' : '#333',
+                      fontWeight: 500,
+                      textAlign: 'right'
+                    }}>
+                      {formatDate(order.paidAt)}
+                    </Typography>
+                  </Stack>
+                )}
+
+                {order.shippedAt && (
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="body2" sx={{ color: '#888', fontWeight: 500 }}>
+                      Дата отправки
+                    </Typography>
+                    <Typography variant="body1" sx={{
+                      color: theme.palette.mode === 'dark' ? '#fff' : '#333',
+                      fontWeight: 500,
+                      textAlign: 'right'
+                    }}>
+                      {formatDate(order.shippedAt)}
+                    </Typography>
+                  </Stack>
+                )}
+              </Stack>
+            </Box>
+          )}
         </Box>
       </Box>
-    </SwipeableDrawer>
+    </Drawer>
   )
 }
 
