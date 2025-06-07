@@ -30,6 +30,7 @@ import CustomAvatar from '@core/components/mui/Avatar'
 
 // Hook Imports
 import { useSettings } from '@core/hooks/useSettings'
+import { useProfileStore } from '@/stores/profileStore'
 
 // Util Imports
 import { getLocalizedUrl } from '@/utils/i18n'
@@ -56,6 +57,10 @@ const UserDropdown = () => {
   const { data: session } = useSession()
   const { settings } = useSettings()
   const { lang: locale } = useParams()
+  const { getDisplayName, getAvatarUrl } = useProfileStore()
+
+  const displayName = getDisplayName()
+  const avatarUrl = getAvatarUrl()
 
   const handleDropdownOpen = () => {
     !open ? setOpen(true) : setOpen(false)
@@ -96,8 +101,8 @@ const UserDropdown = () => {
       >
         <CustomAvatar
           ref={anchorRef}
-          alt={session?.user?.name || ''}
-          src={session?.user?.image || ''}
+          alt={displayName}
+          src={avatarUrl}
           onClick={handleDropdownOpen}
           className='cursor-pointer'
         />
@@ -121,9 +126,9 @@ const UserDropdown = () => {
               <ClickAwayListener onClickAway={e => handleDropdownClose(e as MouseEvent | TouchEvent)}>
                 <MenuList>
                   <div className='flex items-center plb-2 pli-5 gap-2' tabIndex={-1}>
-                    <CustomAvatar size={40} alt={session?.user?.name || ''} src={session?.user?.image || ''} />
+                    <CustomAvatar size={40} alt={displayName} src={avatarUrl} />
                     <div className='flex items-start flex-col'>
-                      <Typography variant='h6'>{session?.user?.name || ''}</Typography>
+                      <Typography variant='h6'>{displayName}</Typography>
                       <Typography variant='body2' color='text.disabled'>
                         {session?.user?.email || ''}
                       </Typography>

@@ -29,14 +29,7 @@ import Tabs from '@mui/material/Tabs'
 import Tab from '@mui/material/Tab'
 import Tooltip from '@mui/material/Tooltip'
 
-// Components Imports
-import ProcurementOverview from '@views/procurement/ProcurementOverview'
-import SupplierChart from '@views/procurement/SupplierChart'
-import PurchaseStatus from '@views/procurement/PurchaseStatus'
-import Vertical from '@components/card-statistics/Vertical'
-import ProcurementTable from '@views/procurement/ProcurementTable'
-import TopSuppliers from '@views/procurement/TopSuppliers'
-import PendingOrders from '@views/procurement/PendingOrders'
+// Components Imports (unused imports removed)
 
 // Types
 interface Product {
@@ -96,7 +89,7 @@ const ProcurementPage = () => {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' })
-  const [exchangeRate, setExchangeRate] = useState(3.5) // Курс лиры к рублю
+  const [exchangeRate] = useState(3.5) // Курс лиры к рублю
   const [tabValue, setTabValue] = useState(0)
   const [purchaseHistory, setPurchaseHistory] = useState<Purchase[]>([])
 
@@ -104,6 +97,7 @@ const ProcurementPage = () => {
   useEffect(() => {
     fetchProducts()
     fetchPurchaseHistory()
+
     // Получить курс из настроек
     // fetchExchangeRate()
   }, [])
@@ -111,7 +105,7 @@ const ProcurementPage = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true)
-      const response = await fetch('http://localhost:3001/api/products')
+      const response = await fetch('http://localhost:3011/api/products')
       const data = await response.json()
 
       if (data.success) {
@@ -132,14 +126,17 @@ const ProcurementPage = () => {
 
   const fetchPurchaseHistory = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/purchases')
+      console.log('📋 Загрузка истории закупок...')
+      const response = await fetch('http://localhost:3011/api/purchases')
       const data = await response.json()
 
       if (data.success) {
-        setPurchaseHistory(data.data.purchases || [])
+        console.log(`✅ Загружено ${data.total} закупок`)
+        setPurchaseHistory(data.data || [])
       }
     } catch (error) {
-      console.error('Error fetching purchase history:', error)
+      console.error('❌ Error fetching purchase history:', error)
+      showSnackbar('Не удалось загрузить историю закупок', 'error')
     }
   }
 
@@ -147,6 +144,7 @@ const ProcurementPage = () => {
   const handleAddItem = () => {
     if (!selectedProduct || !costTry || quantity < 1) {
       showSnackbar('Заполните все поля', 'error')
+
       return
     }
 
@@ -224,7 +222,7 @@ const ProcurementPage = () => {
       }
 
       // 3. Добавить расход в Expenses
-      await fetch('http://localhost:3001/api/expenses', {
+              await fetch('http://localhost:3011/api/expenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -447,16 +445,18 @@ const ProcurementPage = () => {
                 </Alert>
 
                 <Tooltip title="Или используйте ⌘+Enter">
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    size="large"
-                    onClick={handleSavePurchase}
-                    disabled={purchaseItems.length === 0 || saving}
-                    startIcon={saving ? <CircularProgress size={20} /> : <i className='bx-save' />}
-                  >
-                    {saving ? 'Сохранение...' : 'Сохранить закупку'}
-                  </Button>
+                  <span>
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      size="large"
+                      onClick={handleSavePurchase}
+                      disabled={purchaseItems.length === 0 || saving}
+                      startIcon={saving ? <CircularProgress size={20} /> : <i className='bx-save' />}
+                    >
+                      {saving ? 'Сохранение...' : 'Сохранить закупку'}
+                    </Button>
+                  </span>
                 </Tooltip>
               </Box>
             </CardContent>

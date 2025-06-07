@@ -3,6 +3,9 @@
 // React Imports
 import React, { useState, useCallback } from 'react'
 
+// Next Imports
+import { usePathname } from 'next/navigation'
+
 // MUI Imports
 import classnames from 'classnames'
 import IconButton from '@mui/material/IconButton'
@@ -96,6 +99,10 @@ const NavbarContent = () => {
   const { range, setRange } = useDateRangeStore()
   const theme = useTheme()
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'))
+  const pathname = usePathname()
+
+  // Скрыть date picker на странице настроек аккаунта
+  const shouldHideDatePicker = pathname?.includes('/pages/account-settings')
 
   // States
   const [syncing, setSyncing] = useState(false)
@@ -186,49 +193,53 @@ const NavbarContent = () => {
       <div className='flex items-center gap-3'>
         <NavToggle />
 
-        {/* Premium Date Range Picker - Desktop has sticky positioning, Mobile uses fallback */}
-        {isDesktop ? (
-          <PremiumDateRangePicker
-            sticky={true}
-            stickyTop={64}
-            className="premium-date-picker-desktop"
-          />
-        ) : (
-          /* Mobile: Simplified version with bottom sheet fallback */
-          <Box
-            component="button"
-            onClick={handleDatePickerClick}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              px: 2,
-              py: 1,
-              borderRadius: 1,
-              cursor: 'pointer',
-              bgcolor: 'transparent',
-              border: 'none',
-              transition: theme.transitions.create(['background-color'], {
-                duration: theme.transitions.duration.short
-              }),
-              '&:hover': {
-                bgcolor: 'action.hover'
-              }
-            }}
-          >
-            <i className="bx-calendar text-xl" style={{ color: theme.palette.primary.main }} />
-            <Typography
-              variant="body2"
-              sx={{
-                fontWeight: 500,
-                color: range.start && range.end ? 'text.primary' : 'text.disabled',
-                whiteSpace: 'nowrap',
-                fontSize: '0.875rem'
-              }}
-            >
-              {formatDateRange()}
-            </Typography>
-          </Box>
+        {/* Premium Date Range Picker - скрыть на странице настроек аккаунта */}
+        {!shouldHideDatePicker && (
+          <>
+            {isDesktop ? (
+              <PremiumDateRangePicker
+                sticky={true}
+                stickyTop={64}
+                className="premium-date-picker-desktop"
+              />
+            ) : (
+              /* Mobile: Simplified version with bottom sheet fallback */
+              <Box
+                component="button"
+                onClick={handleDatePickerClick}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  px: 2,
+                  py: 1,
+                  borderRadius: 1,
+                  cursor: 'pointer',
+                  bgcolor: 'transparent',
+                  border: 'none',
+                  transition: theme.transitions.create(['background-color'], {
+                    duration: theme.transitions.duration.short
+                  }),
+                  '&:hover': {
+                    bgcolor: 'action.hover'
+                  }
+                }}
+              >
+                <i className="bx-calendar text-xl" style={{ color: theme.palette.primary.main }} />
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 500,
+                    color: range.start && range.end ? 'text.primary' : 'text.disabled',
+                    whiteSpace: 'nowrap',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  {formatDateRange()}
+                </Typography>
+              </Box>
+            )}
+          </>
         )}
       </div>
 

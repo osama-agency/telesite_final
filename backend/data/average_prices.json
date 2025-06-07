@@ -1,0 +1,23 @@
+{
+  "Attex 18 mg": {
+    "averagePrice": 5500,
+    "lastUpdated": "2025-06-07T14:27:43.656Z",
+    "salesCount": 3,
+    "period": "undefined - undefined",
+    "source": "real_sales"
+  },
+  "Attex 4 mg (сироп)": {
+    "averagePrice": 4900,
+    "lastUpdated": "2025-06-07T14:27:43.691Z",
+    "salesCount": 10,
+    "period": "undefined - undefined",
+    "source": "real_sales"
+  },
+  "Мирена 20 мкг/24 часа": {
+    "averagePrice": 8900,
+    "lastUpdated": "2025-06-07T14:27:43.699Z",
+    "salesCount": 2,
+    "period": "undefined - undefined",
+    "source": "real_sales"
+  }
+}

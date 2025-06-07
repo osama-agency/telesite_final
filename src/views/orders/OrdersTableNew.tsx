@@ -45,6 +45,9 @@ import OrderDetailsDrawer from '@/components/orders/OrderDetailsDrawer'
 import { useOrdersFilterStore } from '@/store/ordersFilterStore'
 import { useDateRangeStore } from '@/store/dateRangeStore'
 
+// Enhanced Toast Import
+import { showSuccessToast, showErrorToast } from '@/utils/enhancedToast'
+
 
 
 // Premium Sneat Filter Button Styles
@@ -214,35 +217,46 @@ const AviasalesOrdersTable = () => {
     try {
       setLoading(true)
 
-      const queryParams = new URLSearchParams({
-        page: (page + 1).toString(),
-        limit: rowsPerPage.toString(),
-        sortBy: orderBy,
-        sortOrder: orderDirection.toUpperCase()
-      })
-
-      // Добавляем фильтры по дате только если они заданы в range
-      if (range.start) {
-        queryParams.append('dateFrom', range.start.toISOString().split('T')[0])
-      }
-
-      if (range.end) {
-        queryParams.append('dateTo', range.end.toISOString().split('T')[0])
-      }
-
-      const response = await fetch(`http://localhost:3011/api/orders?${queryParams}`)
+      const response = await fetch('http://localhost:3011/api/orders')
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const data: ApiResponse = await response.json()
+      const data = await response.json()
 
-      if (!data.success) {
-        throw new Error(data.message || 'Failed to fetch orders')
+      // Обрабатываем данные из нашего локального API
+      if (data.success && data.data && Array.isArray(data.data.orders)) {
+        // Преобразуем данные в нужный формат
+        const transformedOrders = data.data.orders.map((order: any) => ({
+          id: order.id?.toString() || Math.random().toString(),
+          externalId: order.externalId?.toString() || order.id?.toString() || 'N/A',
+          customerName: order.customerName || 'Не указан',
+          customerEmail: order.customerEmail || null,
+          customerPhone: order.customerPhone || null,
+          status: mapOrderStatus(order.status),
+          total: order.total?.toString() || '0',
+          currency: order.currency || 'RUB',
+          orderDate: order.orderDate || order.createdAt || new Date().toISOString(),
+          createdAt: order.createdAt || new Date().toISOString(),
+          updatedAt: order.updatedAt || new Date().toISOString(),
+          items: order.items?.map((item: any, index: number) => ({
+            id: item.id?.toString() || index.toString(),
+            orderId: order.id?.toString() || Math.random().toString(),
+            productId: item.productId?.toString() || null,
+            name: item.name || `Товар ${index + 1}`,
+            quantity: item.quantity || 1,
+            price: item.price?.toString() || '0',
+            total: item.total?.toString() || '0',
+            createdAt: order.createdAt || new Date().toISOString(),
+            updatedAt: order.updatedAt || new Date().toISOString()
+          })) || []
+        }))
+
+        setOrders(transformedOrders)
+      } else {
+        setOrders([])
       }
-
-      setOrders(data.data.orders || [])
     } catch (err) {
       console.error('Error fetching orders:', err)
       setSnackbar({
@@ -254,6 +268,22 @@ const AviasalesOrdersTable = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Helper function to map order status
+  const mapOrderStatus = (status: any): string => {
+    if (!status) return 'processing'
+
+    const statusStr = status.toString().toLowerCase()
+
+    // Маппинг статусов
+    if (statusStr.includes('paid') || statusStr.includes('оплач')) return 'shipped'
+    if (statusStr.includes('cancel') || statusStr.includes('отмен')) return 'cancelled'
+    if (statusStr.includes('ship') || statusStr.includes('доставк')) return 'shipped'
+    if (statusStr.includes('pending') || statusStr.includes('ожид')) return 'processing'
+    if (statusStr.includes('unpaid') || statusStr.includes('неоплач')) return 'unpaid'
+
+    return 'processing' // default
   }
 
 
@@ -278,11 +308,16 @@ const AviasalesOrdersTable = () => {
   }, [])
 
   const formatDate = useCallback((dateString: string) => {
+    if (!dateString) return 'Дата не указана'
+
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return 'Некорректная дата'
+
     return new Intl.DateTimeFormat('ru-RU', {
       day: '2-digit',
       month: 'short',
       year: 'numeric'
-    }).format(new Date(dateString))
+    }).format(date)
   }, [])
 
   // Status configuration with enhanced colors
@@ -412,22 +447,28 @@ const AviasalesOrdersTable = () => {
     // Required by SwipeableDrawer but we control opening via handleOrderClick
   }, [])
 
-  // Copy amount handler
+  // Copy amount handler with enhanced feedback
   const handleCopyAmount = useCallback(async (amount: string, event: React.MouseEvent) => {
     event.stopPropagation()
 
     try {
       await navigator.clipboard.writeText(amount)
 
+      // Enhanced success feedback
       setSnackbar({
         open: true,
-        message: 'Сумма скопирована!',
+        message: `💰 Сумма ${amount} скопирована!`,
         severity: 'success'
       })
+
+      // Add haptic feedback if available
+      if ('vibrate' in navigator) {
+        navigator.vibrate(50)
+      }
     } catch (error) {
       setSnackbar({
         open: true,
-        message: 'Не удалось скопировать',
+        message: '❌ Не удалось скопировать сумму',
         severity: 'error'
       })
     }
@@ -642,9 +683,18 @@ const AviasalesOrdersTable = () => {
               return (
                 <motion.div
                   key={order.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2, delay: index * 0.03 }}
+                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  whileHover={{
+                    y: -2,
+                    transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] }
+                  }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{
+                    duration: 0.4,
+                    delay: index * 0.05,
+                    ease: [0.4, 0, 0.2, 1]
+                  }}
                 >
                   <Box
                     onClick={() => handleOrderClick(order.id)}
@@ -655,12 +705,28 @@ const AviasalesOrdersTable = () => {
                       bgcolor: 'background.paper',
                       p: 3,
                       cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      boxShadow: 'none',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                       mb: 2,
+                      position: 'relative',
+                      overflow: 'hidden',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: '2px',
+                        background: 'linear-gradient(90deg, transparent, rgba(105, 108, 255, 0.3), transparent)',
+                        transform: 'translateX(-100%)',
+                        transition: 'transform 0.6s ease',
+                      },
                       '&:hover': {
                         borderColor: 'primary.main',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+                        boxShadow: '0 8px 32px rgba(105, 108, 255, 0.12)',
+                        '&::before': {
+                          transform: 'translateX(100%)',
+                        }
                       },
                       '&:active': {
                         transform: 'scale(0.995)'
@@ -685,23 +751,33 @@ const AviasalesOrdersTable = () => {
                         #{order.externalId} · {formatDate(order.orderDate).replace(' г.', '')}
                       </Typography>
 
-                      <Typography
-                        variant="body2"
-                        onClick={(e) => handleCopyAmount(order.total, e)}
-                        sx={{
-                          fontSize: '14px',
-                          fontWeight: 600,
-                          color: 'text.primary',
-                          fontFamily: 'system-ui',
-                          cursor: 'pointer',
-                          '&:hover': {
-                            color: 'primary.main'
-                          }
-                        }}
-                        title="Нажмите, чтобы скопировать"
+                      <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
                       >
-                        {formatCurrency(order.total)}
-                      </Typography>
+                        <Typography
+                          variant="body2"
+                          onClick={(e) => handleCopyAmount(order.total, e)}
+                          sx={{
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            color: 'text.primary',
+                            fontFamily: 'system-ui',
+                            cursor: 'pointer',
+                            padding: '4px 8px',
+                            borderRadius: 1,
+                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                            '&:hover': {
+                              color: 'primary.main',
+                              backgroundColor: 'rgba(105, 108, 255, 0.08)',
+                            }
+                          }}
+                          title="Нажмите, чтобы скопировать"
+                        >
+                          {formatCurrency(order.total)}
+                        </Typography>
+                      </motion.div>
                     </Box>
 
                     {/* Customer Name - Main Focus */}
@@ -1943,8 +2019,7 @@ const AviasalesOrdersTable = () => {
       <OrderDetailsDrawer
         open={detailsDrawerOpen}
         onClose={handleDetailsClose}
-        onOpen={handleDetailsOpen}
-        orderId={selectedOrderId}
+        orderId={selectedOrderId || undefined}
       />
 
       {/* Snackbar for notifications */}

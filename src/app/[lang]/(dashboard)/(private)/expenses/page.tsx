@@ -96,7 +96,7 @@ const ExpensesPage = () => {
         ...(range.end && { dateTo: range.end.toISOString().split('T')[0] })
       })
 
-      const response = await fetch(`http://localhost:3001/api/expenses?${queryParams}`)
+      const response = await fetch(`http://localhost:3011/api/expenses?${queryParams}`)
       const data = await response.json()
 
       if (data.success) {
@@ -144,7 +144,7 @@ const ExpensesPage = () => {
     try {
       setSaving(true)
 
-      const response = await fetch('http://localhost:3001/api/expenses', {
+      const response = await fetch('http://localhost:3011/api/expenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -6,6 +6,9 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 
 import syncRoutes from './routes/sync';
+import userRoutes from './routes/userRoutes';
+import productRoutes from './routes/productRoutes';
+import currencyRoutes from './routes/currencyRoutes';
 
 // Загружаем переменные окружения
 dotenv.config();
@@ -14,7 +17,10 @@ const app = express();
 
 // Middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
+  credentials: true
+}));
 app.use(compression());
 app.use(morgan('combined'));
 app.use(express.json());
@@ -27,6 +33,12 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api', syncRoutes);
+app.use('/api/user', userRoutes);
+app.use('/api', productRoutes);
+app.use('/api/currency', currencyRoutes);
+
+// Статические файлы для загруженных изображений
+app.use('/uploads', express.static('uploads'));
 
 // 404 handler
 app.use('*', (req, res) => {

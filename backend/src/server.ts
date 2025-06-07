@@ -1,6 +1,6 @@
 import app from './app';
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3011;
 const HOST = process.env.HOST || 'localhost';
 
 app.listen(PORT, () => {

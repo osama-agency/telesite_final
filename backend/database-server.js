@@ -77,17 +77,118 @@ app.post('/api/sync-orders', async (req, res) => {
   try {
     console.log('🔄 Sync orders request received');
 
-    // Здесь можно добавить логику синхронизации с внешним API
-    // Пока что просто возвращаем количество заказов в базе
-    const count = await prisma.order.count();
+    const { authorization } = req.headers;
+    if (!authorization) {
+      return res.status(400).json({
+        success: false,
+        error: 'Authorization header is required'
+      });
+    }
+
+    // Получаем данные с внешнего API Strattera
+    const axios = require('axios');
+    const apiUrl = 'https://strattera.tgapp.online/api/v1/orders';
+
+    console.log('🌐 Fetching orders from external API...');
+
+    const response = await axios.get(apiUrl, {
+      headers: {
+        'Authorization': authorization
+      }
+    });
+
+    const externalOrders = response.data;
+    let importedCount = 0;
+    let errorCount = 0;
+
+    console.log(`📦 Received ${externalOrders.length} orders from external API`);
+
+    // Очищаем существующие данные
+    await prisma.orderItem.deleteMany({});
+    await prisma.order.deleteMany({});
+
+    // Обрабатываем каждый заказ
+    for (const externalOrder of externalOrders) {
+      try {
+        const totalAmount = parseFloat(externalOrder.total_amount);
+
+        // Парсим дату в формате "05.06.2025 21:31:26"
+        const dateString = externalOrder.paid_at || externalOrder.created_at;
+        const dateParts = dateString.split(' ');
+        const [day, month, year] = dateParts[0].split('.');
+        const [hours, minutes, seconds] = dateParts[1].split(':');
+        const orderDate = new Date(
+          parseInt(year),
+          parseInt(month) - 1,
+          parseInt(day),
+          parseInt(hours),
+          parseInt(minutes),
+          parseInt(seconds)
+        );
+
+        if (isNaN(totalAmount) || isNaN(orderDate.getTime())) {
+          errorCount++;
+          continue;
+        }
+
+        await prisma.order.create({
+          data: {
+            externalId: externalOrder.id.toString(),
+            customerName: externalOrder.user.full_name,
+            customerEmail: null,
+            customerPhone: null,
+            customerCity: externalOrder.user.city,
+            customerAddress: externalOrder.user.city,
+            bankCard: externalOrder.bank_card,
+            bonus: externalOrder.bonus || 0,
+            deliveryCost: externalOrder.delivery_cost || 0,
+            paidAt: externalOrder.paid_at ? new Date(externalOrder.paid_at.split(' ').map((part, i) => i === 0 ? part.split('.').reverse().join('-') : part).join(' ')) : null,
+            shippedAt: externalOrder.shipped_at ? new Date(externalOrder.shipped_at.split(' ').map((part, i) => i === 0 ? part.split('.').reverse().join('-') : part).join(' ')) : null,
+            status: externalOrder.status,
+            total: totalAmount,
+            currency: 'RUB',
+            orderDate: orderDate,
+            items: {
+              create: externalOrder.order_items.filter(item => {
+                const itemPrice = parseFloat(item.price);
+                return !isNaN(itemPrice) && item.quantity > 0;
+              }).map(item => {
+                const itemPrice = parseFloat(item.price);
+                return {
+                  productId: null,
+                  name: item.name,
+                  quantity: item.quantity,
+                  price: itemPrice,
+                  total: itemPrice * item.quantity
+                };
+              })
+            }
+          }
+        });
+
+        importedCount++;
+
+        if (importedCount % 100 === 0) {
+          console.log(`✅ Imported ${importedCount} orders...`);
+        }
+
+      } catch (orderError) {
+        console.error(`❌ Error processing order ${externalOrder.id}:`, orderError.message);
+        errorCount++;
+      }
+    }
+
+    console.log(`🎉 Import completed: ${importedCount} imported, ${errorCount} errors`);
 
     res.json({
       success: true,
-      imported: count,
-      message: 'Orders synced successfully'
+      imported: importedCount,
+      errors: errorCount,
+      message: `Successfully imported ${importedCount} orders from Strattera API`
     });
+
   } catch (error) {
-    console.error('Error syncing orders:', error);
+    console.error('❌ Sync failed:', error.message);
     res.status(500).json({
       success: false,
       error: 'Sync error',

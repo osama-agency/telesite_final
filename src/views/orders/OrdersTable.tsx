@@ -150,34 +150,50 @@ const OrdersTable = () => {
     try {
       setLoading(true)
 
-      const queryParams = new URLSearchParams({
-        page: '1',
-        limit: '1000',
-        sortBy: 'orderDate',
-        sortOrder: 'DESC'
+      const response = await fetch('https://strattera.tgapp.online/api/v1/orders', {
+        headers: {
+          'Authorization': '8cM9wVBrY3p56k4L1VBpIBwOsw'
+        }
       })
-
-      // Добавляем фильтры по дате только если они заданы
-      if (range.start) {
-        queryParams.append('dateFrom', range.start.toISOString().split('T')[0])
-      }
-      if (range.end) {
-        queryParams.append('dateTo', range.end.toISOString().split('T')[0])
-      }
-
-      const response = await fetch(`http://localhost:3010/api/orders?${queryParams}`)
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const data: ApiResponse = await response.json()
+      const data = await response.json()
 
-      if (!data.success) {
-        throw new Error(data.message || 'Failed to fetch orders')
+      // Обрабатываем данные напрямую как массив из API Strattera
+      if (Array.isArray(data)) {
+        // Преобразуем данные в нужный формат
+        const transformedOrders = data.map((order: any) => ({
+          id: order.id?.toString() || Math.random().toString(),
+          externalId: order.id?.toString() || order.order_id || 'N/A',
+          customerName: order.user?.name || order.customer_name || 'Не указан',
+          customerEmail: order.user?.email || order.customer_email || null,
+          customerPhone: order.user?.phone || order.customer_phone || null,
+          status: mapOrderStatus(order.status),
+          total: order.total?.toString() || order.amount?.toString() || '0',
+          currency: order.currency || 'RUB',
+          orderDate: order.created_at || order.order_date || new Date().toISOString(),
+          createdAt: order.created_at || new Date().toISOString(),
+          updatedAt: order.updated_at || new Date().toISOString(),
+          items: order.items?.map((item: any, index: number) => ({
+            id: item.id?.toString() || index.toString(),
+            orderId: order.id?.toString() || Math.random().toString(),
+            productId: item.product_id?.toString() || null,
+            name: item.name || item.product_name || `Товар ${index + 1}`,
+            quantity: item.quantity || 1,
+            price: item.price?.toString() || '0',
+            total: item.total?.toString() || (item.price * item.quantity)?.toString() || '0',
+            createdAt: order.created_at || new Date().toISOString(),
+            updatedAt: order.updated_at || new Date().toISOString()
+          })) || []
+        }))
+
+        setOrders(transformedOrders)
+      } else {
+        setOrders([])
       }
-
-      setOrders(data.data.orders || [])
     } catch (err) {
       console.error('Error fetching orders:', err)
       setSnackbar({
@@ -188,40 +204,39 @@ const OrdersTable = () => {
     } finally {
       setLoading(false)
     }
-  }, [range.start, range.end])
+  }, [])
 
-  // Sync orders
+  // Helper function to map order status
+  const mapOrderStatus = (status: any): string => {
+    if (!status) return 'processing'
+
+    const statusStr = status.toString().toLowerCase()
+
+    // Маппинг статусов
+    if (statusStr.includes('paid') || statusStr.includes('оплач')) return 'shipped'
+    if (statusStr.includes('cancel') || statusStr.includes('отмен')) return 'cancelled'
+    if (statusStr.includes('ship') || statusStr.includes('доставк')) return 'shipped'
+    if (statusStr.includes('pending') || statusStr.includes('ожид')) return 'processing'
+    if (statusStr.includes('unpaid') || statusStr.includes('неоплач')) return 'unpaid'
+
+    return 'processing' // default
+  }
+
+  // Sync orders (refresh data from external API)
   const handleSyncOrders = useCallback(async () => {
     try {
       setSyncing(true)
-
-      const response = await fetch('http://localhost:3010/api/sync-orders', {
-        method: 'POST',
-        headers: { 'Authorization': '8cM9wVBrY3p56k4L1VBpIBwOsw' }
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
-
-      if (!data.success) {
-        throw new Error(data.message || 'Failed to sync orders')
-      }
-
       await fetchOrders()
-
       setSnackbar({
         open: true,
-        message: `Синхронизация завершена: ${data.imported} заказов`,
+        message: 'Данные обновлены',
         severity: 'success'
       })
     } catch (err) {
       console.error('Error syncing orders:', err)
       setSnackbar({
         open: true,
-        message: 'Ошибка синхронизации данных',
+        message: 'Ошибка обновления данных',
         severity: 'error'
       })
     } finally {

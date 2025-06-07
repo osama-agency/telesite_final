@@ -30,7 +30,7 @@ type LogoTextProps = {
   color?: CSSProperties['color']
 }
 
-const LogoText = styled(motion.span)<LogoTextProps>`
+const LogoText = styled.span<LogoTextProps>`
   color: ${({ color }) => color ?? 'var(--mui-palette-text-primary)'};
   font-family: ${montserrat.style.fontFamily};
   font-size: 1.75rem;
@@ -38,7 +38,13 @@ const LogoText = styled(motion.span)<LogoTextProps>`
   font-weight: 800;
   font-style: italic;
   letter-spacing: 0.15px;
-  margin-inline-start: 8px;
+  transition: ${({ transitionDuration }) =>
+    `margin-inline-start ${transitionDuration}ms ease-in-out, opacity ${transitionDuration}ms ease-in-out`};
+
+  ${({ isHovered, isCollapsed, isBreakpointReached }) =>
+    !isBreakpointReached && isCollapsed && !isHovered
+      ? 'opacity: 0; margin-inline-start: 0;'
+      : 'opacity: 1; margin-inline-start: 8px;'}
 `
 
 const Logo = ({ color }: { color?: CSSProperties['color'] }) => {
@@ -52,48 +58,6 @@ const Logo = ({ color }: { color?: CSSProperties['color'] }) => {
   // Vars
   const { layout } = settings
   const isCollapsed = layout === 'collapsed'
-
-  // Варианты анимации для логотипа (иконки)
-  const logoVariants = {
-    collapsed: {
-      scale: 1,
-      transition: {
-        duration: 0.3,
-        ease: 'easeInOut'
-      }
-    },
-    expanded: {
-      scale: 1.05,
-      transition: {
-        duration: 0.3,
-        ease: 'easeInOut'
-      }
-    }
-  }
-
-  // Варианты анимации для текста с задержкой
-  const textVariants = {
-    collapsed: {
-      opacity: 0,
-      x: -10,
-      transition: {
-        duration: 0.2,
-        ease: 'easeInOut'
-      }
-    },
-    expanded: {
-      opacity: 1,
-      x: 0,
-      transition: {
-        duration: 0.25,
-        ease: 'easeOut',
-        delay: 0.2  // Появляется через 200ms после начала раскрытия сайдбара
-      }
-    }
-  }
-
-  const shouldAnimate = isCollapsed && !isBreakpointReached
-  const currentVariant = shouldAnimate ? (isHovered ? 'expanded' : 'collapsed') : 'expanded'
 
   useEffect(() => {
     if (layout !== 'collapsed') {
@@ -110,25 +74,42 @@ const Logo = ({ color }: { color?: CSSProperties['color'] }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHovered, layout, isBreakpointReached])
 
+  // Варианты анимации для логотипа
+  const logoVariants = {
+    collapsed: {
+      scale: 1,
+      transition: {
+        duration: 0.3,
+        ease: 'easeInOut'
+      }
+    },
+    expanded: {
+      scale: 1.05,
+      transition: {
+        duration: 0.3,
+        ease: 'easeInOut',
+        delay: 0.17  // На 20ms позже пунктов меню (0.15 + 0.02)
+      }
+    }
+  }
+
+  const currentVariant = isCollapsed && !isHovered ? 'collapsed' : 'expanded'
+
   return (
-    <div className='flex items-center'>
-      <motion.div
-        variants={logoVariants}
-        initial={currentVariant}
-        animate={currentVariant}
-      >
-        <AnimatedLogo
-          className='w-8 h-8'
-          isCollapsed={isCollapsed}
-          isHovered={isHovered}
-        />
-      </motion.div>
+    <motion.div
+      className='flex items-center'
+      variants={logoVariants}
+      initial={currentVariant}
+      animate={currentVariant}
+    >
+      <AnimatedLogo
+        className='w-8 h-8'
+        isCollapsed={isCollapsed}
+        isHovered={isHovered}
+      />
       <LogoText
         color={color}
         ref={logoTextRef}
-        variants={textVariants}
-        initial={currentVariant}
-        animate={currentVariant}
         isHovered={isHovered}
         isCollapsed={layout === 'collapsed'}
         transitionDuration={transitionDuration}
@@ -136,7 +117,7 @@ const Logo = ({ color }: { color?: CSSProperties['color'] }) => {
       >
         {themeConfig.templateName}
       </LogoText>
-    </div>
+    </motion.div>
   )
 }
 

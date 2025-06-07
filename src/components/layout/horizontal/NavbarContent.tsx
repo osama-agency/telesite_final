@@ -1,6 +1,8 @@
+'use client'
+
 // Next Imports
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, usePathname } from 'next/navigation'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -80,6 +82,10 @@ const NavbarContent = () => {
   // Hooks
   const { isBreakpointReached } = useHorizontalNav()
   const { lang: locale } = useParams()
+  const pathname = usePathname()
+
+  // Скрыть date picker на странице настроек аккаунта
+  const shouldHideDatePicker = pathname?.includes('/pages/account-settings')
 
   return (
     <div
@@ -96,11 +102,13 @@ const NavbarContent = () => {
       </div>
 
       <div className='flex items-center'>
-        {/* Premium Date Range Picker for Horizontal Layout */}
-        <PremiumDateRangePicker
-          sticky={false}
-          className="mr-4"
-        />
+        {/* Premium Date Range Picker for Horizontal Layout - скрыть на странице настроек */}
+        {!shouldHideDatePicker && (
+          <PremiumDateRangePicker
+            sticky={false}
+            className="mr-4"
+          />
+        )}
         <LanguageDropdown />
         <ModeDropdown />
         <NotificationsDropdown notifications={notifications} />
