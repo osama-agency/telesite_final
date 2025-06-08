@@ -5,6 +5,7 @@ interface CurrencyRate {
   Name: string;
   Value: number;
   Previous: number;
+  Nominal: number;
 }
 
 interface CBRApiResponse {
@@ -49,10 +50,11 @@ async function fetchCurrencyFromCBR(): Promise<number> {
       throw new Error('TRY currency not found in CBR response');
     }
 
-    // ЦБ дает курс за 1 лиру в рублях, нам нужно наоборот - рублей за лиру
-    const rubPerTry = tryRate.Value;
+    // ЦБ дает курс за Nominal лир (обычно 10)
+    // Нужно получить курс за 1 лиру
+    const rubPerTry = tryRate.Value / tryRate.Nominal;
 
-    console.log(`💱 Курс ЦБ: 1 ₺ = ${rubPerTry.toFixed(4)} ₽`);
+    console.log(`💱 Курс ЦБ: 1 ₺ = ${rubPerTry.toFixed(4)} ₽ (за ${tryRate.Nominal} лир: ${tryRate.Value} ₽)`);
 
     return rubPerTry;
   } catch (error) {

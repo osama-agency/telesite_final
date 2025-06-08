@@ -177,3 +177,107 @@ export const hideProduct = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const updateProductStock = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { stockQuantity } = req.body;
+
+    const product = await prisma.product.update({
+      where: {
+        id: parseInt(id)
+      },
+      data: {
+        stockQuantity: parseInt(stockQuantity),
+        updatedAt: new Date()
+      }
+    });
+
+    console.log(`📦 Обновлен остаток товара ${product.name}: ${stockQuantity} шт`);
+
+    res.json({
+      success: true,
+      data: product,
+      message: 'Остаток товара обновлен'
+    });
+
+  } catch (error) {
+    console.error('❌ Ошибка обновления остатка:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Ошибка обновления остатка'
+    });
+  }
+};
+
+export const updateProductPrice = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { price } = req.body;
+
+    const product = await prisma.product.update({
+      where: {
+        id: parseInt(id)
+      },
+      data: {
+        price: parseFloat(price),
+        updatedAt: new Date()
+      }
+    });
+
+    console.log(`💰 Обновлена цена товара ${product.name}: ${price} ₽`);
+
+    res.json({
+      success: true,
+      data: product,
+      message: 'Цена товара обновлена'
+    });
+
+  } catch (error) {
+    console.error('❌ Ошибка обновления цены:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Ошибка обновления цены'
+    });
+  }
+};
+
+export const updateProductAnalytics = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { avgDailySales30d, daysToZero, recommendedQty, trend, inTransit, minStock } = req.body;
+
+    const updateData: any = {};
+
+    if (avgDailySales30d !== undefined) updateData.avgDailySales30d = parseFloat(avgDailySales30d);
+    if (daysToZero !== undefined) updateData.daysToZero = parseInt(daysToZero);
+    if (recommendedQty !== undefined) updateData.recommendedQty = parseInt(recommendedQty);
+    if (trend !== undefined) updateData.trend = trend;
+    if (inTransit !== undefined) updateData.inTransit = parseInt(inTransit);
+    if (minStock !== undefined) updateData.minStock = parseInt(minStock);
+
+    updateData.updatedAt = new Date();
+
+    const product = await prisma.product.update({
+      where: {
+        id: parseInt(id)
+      },
+      data: updateData
+    });
+
+    console.log(`📊 Обновлена аналитика товара ${product.name}`);
+
+    res.json({
+      success: true,
+      data: product,
+      message: 'Аналитика товара обновлена'
+    });
+
+  } catch (error) {
+    console.error('❌ Ошибка обновления аналитики:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Ошибка обновления аналитики'
+    });
+  }
+};

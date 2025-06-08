@@ -1,425 +1,186 @@
-# Sneat Backend API
+# Backend API для Sneat E-commerce (TypeScript)
 
-Backend API для приложения Sneat e-commerce с PostgreSQL и Prisma.
+## 🏗️ Архитектура
 
-## Функции
+**ВАЖНО**: Используется ТОЛЬКО TypeScript версия. Простые JavaScript серверы запрещены.
 
-- 🗄️ **PostgreSQL** - основная база данных
-- 📊 **Prisma ORM** - современный ORM для TypeScript
-- 🔄 **Синхронизация заказов** - импорт заказов из внешнего API
-- 🚀 **TypeScript** - полная типизация
-- 🐳 **Docker** - готовые контейнеры для деплоя
+### Технологический стек
+- **TypeScript** - строгая типизация (обязательно)
+- **Express.js** - веб-фреймворк
+- **PostgreSQL** - основная база данных
+- **Prisma ORM** - современный ORM для TypeScript
+- **Node-cron** - автоматические задачи
 
-## Быстрый старт
-
-### 1. Установка зависимостей
+## 🚀 Быстрый старт
 
 ```bash
+# 1. Установка зависимостей
+cd backend
 npm install
-```
 
-### 2. Настройка базы данных
-
-Скопируйте `.env` файл:
-```bash
+# 2. Настройка окружения
 cp env.example .env
-```
+# Отредактируйте .env файл с вашими настройками
 
-Настройте `DATABASE_URL` в `.env`:
-```env
-DATABASE_URL="postgresql://myshopuser:MyStrongPass123@localhost:5432/myshop?schema=public"
-```
-
-### 3. Миграции базы данных
-
-```bash
-# Генерация Prisma клиента
+# 3. Настройка базы данных
+npm run prisma:migrate
 npm run prisma:generate
 
-# Запуск миграций
-npm run prisma:migrate
-```
-
-### 4. Запуск сервера
-
-```bash
-# Development режим
-npm run dev
-
-# Production режим
+# 4. Компиляция TypeScript (обязательно!)
 npm run build
+
+# 5. Запуск сервера
 npm start
+# или используйте скрипт
+./start.sh
 ```
 
-Сервер будет доступен на `http://localhost:3011`
+Сервер запустится на порту **3011**.
 
-## API Endpoints
-
-### Health Check
-```
-GET /health
-```
-
-### Синхронизация заказов
-```
-POST /api/sync-orders
-Headers:
-  Authorization: 8cM9wVBrY3p56k4L1VBpIBwOsw
-  Content-Type: application/json
-```
-
-Возвращает:
-```json
-{
-  "imported": 451
-}
-```
-
-**Пример тестирования:**
-```bash
-curl -X POST http://localhost:3011/api/sync-orders \
-  -H "Authorization: 8cM9wVBrY3p56k4L1VBpIBwOsw"
-```
-
-## Docker Deployment
-
-### Запуск с Docker Compose
-
-```bash
-# Запуск всех сервисов
-docker-compose up -d
-
-# Только PostgreSQL
-docker-compose up postgres -d
-
-# Остановка
-docker-compose down
-```
-
-### Сервисы:
-- **postgres** - PostgreSQL 16 база данных (порт 5432)
-- **app** - Backend приложение (порт 3011)
-
-## Scripts
-
-```bash
-# Development
-npm run dev                 # Запуск с hot reload
-
-# Database
-npm run prisma:migrate      # Создание и применение миграций
-npm run prisma:generate     # Генерация Prisma клиента
-npm run prisma:studio       # GUI для базы данных
-npm run db:push             # Push изменений в БД без миграций
-npm run db:reset            # Сброс базы данных
-
-# Build
-npm run build              # Компиляция TypeScript
-npm start                  # Запуск production build
-
-# Testing
-npm test                   # Запуск тестов
-npm run test:watch         # Тесты в watch режиме
-```
-
-## Переменные окружения
-
-```env
-# Server
-NODE_ENV=development
-PORT=3011
-HOST=localhost
-
-# Database
-DATABASE_URL="postgresql://user:password@localhost:5432/database?schema=public"
-
-# External API
-STRATTERA_API_URL=https://strattera.tgapp.online/api/v1/orders
-STRATTERA_API_TOKEN=your_authorization_token_here
-
-# CORS
-CORS_ORIGIN=http://localhost:3000
-
-# Rate Limiting
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX_REQUESTS=100
-```
-
-## Структура проекта
+## 📁 Структура проекта (TypeScript)
 
 ```
 backend/
-├── prisma/
-│   └── schema.prisma          # Prisma схема
-├── src/
-│   ├── lib/
-│   │   └── prisma.ts          # Prisma клиент
-│   ├── types/
-│   │   └── index.ts           # TypeScript типы
-│   ├── controllers/
-│   │   └── syncController.ts  # Контроллер синхронизации
-│   ├── routes/
-│   │   └── sync.ts           # Маршруты API
-│   ├── app.ts                # Express приложение
-│   └── server.ts             # Сервер
-├── docker-compose.yml        # Docker Compose
-├── Dockerfile               # Docker образ
-└── package.json            # Dependencies
+├── src/                    # ⚡ TypeScript исходный код
+│   ├── controllers/        # Контроллеры с типизацией
+│   ├── routes/            # Маршруты API
+│   ├── utils/             # Утилиты и хелперы
+│   ├── types/             # TypeScript типы и интерфейсы
+│   ├── lib/               # Библиотеки (Prisma client)
+│   ├── app.ts             # Настройка Express
+│   └── server.ts          # Точка входа
+├── dist/                  # 📦 Скомпилированный JavaScript (не редактировать!)
+├── prisma/                # Схема БД и миграции
+│   ├── schema.prisma      # Схема базы данных
+│   └── migrations/        # История миграций
+├── tsconfig.json          # ⚙️ Конфигурация TypeScript
+└── package.json           # Зависимости и скрипты
 ```
 
-## Модели базы данных
+## 🔄 Автоматическая синхронизация
 
-### Order
-- `id` - уникальный ID
-- `externalId` - ID из внешнего API
-- `customerName` - имя клиента
-- `customerEmail` - email клиента
-- `customerPhone` - телефон клиента
-- `status` - статус заказа
-- `total` - общая сумма
-- `currency` - валюта
-- `orderDate` - дата заказа
-- `items[]` - элементы заказа
+Система автоматически синхронизирует данные каждые 5 минут:
 
-### OrderItem
-- `id` - уникальный ID
-- `orderId` - ID заказа
-- `productId` - ID товара
-- `name` - название товара
-- `quantity` - количество
-- `price` - цена за единицу
-- `total` - общая стоимость
+- **Заказы**: https://strattera.tgapp.online/api/v1/orders
+- **Товары**: https://strattera.tgapp.online/api/v1/products
+- **Авторизация**: `Authorization: 8cM9wVBrY3p56k4L1VBpIBwOsw`
 
-## Разработка
-
-Backend готов для деплоя и дальнейшей разработки. Архитектура позволяет легко добавлять новые endpoints и модели данных.
-
-### Добавление новых endpoints:
-1. Создайте контроллер в `src/controllers/`
-2. Добавьте маршруты в `src/routes/`
-3. Подключите роуты в `src/app.ts`
-
-### Добавление новых моделей:
-1. Обновите `prisma/schema.prisma`
-2. Запустите `npm run prisma:migrate`
-3. Обновите типы в `src/types/`
-
-## 📋 Prerequisites
-
-- Node.js (v14 or higher)
-- PostgreSQL (v12 or higher)
-- MongoDB (optional)
-- npm or yarn
-
-## 🛠️ Installation
-
-1. **Clone the repository**
+### Мониторинг синхронизации
 ```bash
-cd backend
+# Просмотр логов синхронизации
+tail -f server.log | grep -E "sync|Sync|cron|Cron"
 ```
 
-2. **Install dependencies**
-```bash
-npm install
-```
+## 📡 API Endpoints
 
-3. **Set up environment variables**
-```bash
-cp env.example .env
-# Edit .env with your database credentials
-```
+### Основные endpoints
 
-4. **Create PostgreSQL database**
-```bash
-createdb sneat_db
-# Or use your PostgreSQL client to create the database
-```
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| GET | `/api/orders` | Список заказов из БД |
+| GET | `/api/products` | Список товаров из БД |
+| GET | `/api/currency/rates` | Курсы валют (ЦБ РФ) |
+| POST | `/api/sync-orders` | Ручная синхронизация заказов |
+| POST | `/api/sync-products` | Ручная синхронизация товаров |
 
-5. **Run migrations**
-```bash
-npm run migrate
-```
+[Полный список endpoints →](./BACKEND_DOCUMENTATION.md#-api-endpoints)
 
-6. **Seed the database (optional)**
-```bash
-npm run seed
-```
+## 💱 Курсы валют
 
-## 🚀 Running the Application
+- **Источник**: ЦБ РФ
+- **Формат**: 1 ₺ = 2.03 ₽ (правильный расчет с учетом номинала)
+- **Обновление**: каждые 30 минут
+- **Буфер**: +5% автоматически
+
+## 🛠️ Команды разработчика
 
 ### Development
 ```bash
+# Запуск с hot-reload (использует ts-node-dev)
 npm run dev
+# или прямой путь
+./node_modules/.bin/ts-node-dev --respawn --transpile-only src/server.ts
 ```
 
 ### Production
 ```bash
+# 1. Компиляция TypeScript (обязательно!)
+npm run build
+
+# 2. Запуск скомпилированного кода
 npm start
+# или
+PORT=3011 node dist/server.js
 ```
 
-The server will start on `http://localhost:3000` (or the port specified in .env)
-
-## 📚 API Documentation
-
-Once the server is running, you can access:
-- API Documentation: `http://localhost:3000/api-docs`
-- Health Check: `http://localhost:3000/health`
-
-## 🔗 API Endpoints
-
-### Products
-- `GET /api/v1/products` - Get all products (paginated)
-- `GET /api/v1/products/:id` - Get product by ID
-- `POST /api/v1/products` - Create new product
-- `PUT /api/v1/products/:id` - Update product
-- `DELETE /api/v1/products/:id` - Delete product
-- `GET /api/v1/products/search` - Search products
-- `GET /api/v1/products/low-stock` - Get low stock products
-- `POST /api/v1/products/bulk` - Bulk create/update products
-- `PUT /api/v1/products/:id/stock` - Update product stock
-
-### Customer Orders
-- `GET /api/v1/orders` - Get all orders (paginated)
-- `GET /api/v1/orders/:id` - Get order by ID
-- `POST /api/v1/orders` - Create new order
-- `PUT /api/v1/orders/:id/status` - Update order status
-- `GET /api/v1/orders/statistics` - Get order statistics
-
-### Warehouse Orders
-- `GET /api/v1/warehouse-orders` - Get all warehouse orders
-- `GET /api/v1/warehouse-orders/:id` - Get warehouse order by ID
-- `POST /api/v1/warehouse-orders` - Create new warehouse order
-- `POST /api/v1/warehouse-orders/:id/receive` - Receive items
-- `GET /api/v1/warehouse-orders/pending` - Get pending deliveries
-
-### Expenses
-- `GET /api/v1/expenses` - Get all expenses (paginated)
-- `GET /api/v1/expenses/:id` - Get expense by ID
-- `POST /api/v1/expenses` - Create new expense
-- `PUT /api/v1/expenses/:id` - Update expense
-- `DELETE /api/v1/expenses/:id` - Delete expense
-- `GET /api/v1/expenses/by-category` - Get expenses by category
-- `GET /api/v1/expenses/by-date-range` - Get expenses by date range
-
-## 📁 Project Structure
-
-```
-backend/
-├── src/
-│   ├── config/         # Database and app configuration
-│   ├── controllers/    # Route controllers
-│   ├── middleware/     # Custom middleware
-│   ├── migrations/     # Database migrations
-│   ├── models/         # Database models
-│   ├── routes/         # API routes
-│   ├── seeders/        # Database seeders
-│   ├── services/       # Business logic services
-│   ├── utils/          # Utility functions
-│   ├── app.js          # Express app setup
-│   └── server.js       # Server entry point
-├── .env.example        # Environment variables template
-├── package.json        # Dependencies and scripts
-└── README.md          # This file
-```
-
-## 🔧 Configuration
-
-Key environment variables:
-
-```env
-# Server
-NODE_ENV=development
-PORT=3000
-
-# PostgreSQL
-DATABASE_URL=postgresql://user:pass@localhost:5432/sneat_db
-
-# Security
-JWT_SECRET=your-secret-key
-RATE_LIMIT_MAX_REQUESTS=100
-
-# Logging
-LOG_LEVEL=debug
-```
-
-## 📝 Available Scripts
-
-- `npm start` - Start production server
-- `npm run dev` - Start development server with nodemon
-- `npm run migrate` - Run database migrations
-- `npm run migrate:undo` - Undo last migration
-- `npm run seed` - Run database seeders
-- `npm run seed:undo` - Undo all seeds
-- `npm test` - Run tests
-- `npm run lint` - Run ESLint
-
-## 🔒 Security Features
-
-- Helmet.js for security headers
-- CORS configuration
-- Rate limiting
-- Input validation
-- SQL injection protection (via Sequelize)
-- XSS protection
-
-## 🧪 Testing
-
+### База данных
 ```bash
-# Run all tests
-npm test
-
-# Run with coverage
-npm run test:coverage
+npm run prisma:studio     # GUI для просмотра БД
+npm run prisma:migrate    # Применить миграции
+npm run prisma:generate   # Сгенерировать типы Prisma
 ```
 
-## 🚀 Deployment
+## 📝 Правила разработки
 
-1. Set production environment variables
-2. Run migrations: `npm run migrate`
-3. Start server: `npm start`
+### ✅ ОБЯЗАТЕЛЬНО:
+1. **Использовать TypeScript** для всех файлов
+2. **Типизировать все** - Request, Response, модели
+3. **Компилировать перед запуском** - `npm run build`
+4. **Использовать Prisma** для работы с БД
+5. **Логировать важные операции**
 
-### Docker Support
+### ❌ ЗАПРЕЩЕНО:
+1. **Создавать простые JS файлы** в src/
+2. **Редактировать файлы в dist/** напрямую
+3. **Использовать `any` тип** без крайней необходимости
+4. **Игнорировать ошибки TypeScript**
+5. **Запускать некомпилированный код**
 
+## 🚨 Решение проблем
+
+### "command not found"
 ```bash
-# Build image
-docker build -t sneat-backend .
-
-# Run container
-docker run -p 3000:3000 --env-file .env sneat-backend
+# Используйте прямые пути для npm скриптов
+./node_modules/.bin/ts-node-dev
+./node_modules/.bin/prisma
+./node_modules/.bin/tsc
 ```
 
-## 📊 Database Schema
+### Ошибки компиляции
+```bash
+# Проверить ошибки TypeScript
+npx tsc --noEmit
 
-### Products
-- id, name, sku, description, price, cost, stock, minStock, category, brand, etc.
+# Пересобрать проект
+rm -rf dist
+npm run build
+```
 
-### Customer Orders
-- id, orderNumber, customerName, customerEmail, status, totalAmount, etc.
+### Порт занят
+```bash
+# Найти процесс на порту 3011
+lsof -i :3011
 
-### Customer Order Items
-- id, orderId, productId, quantity, price, discount, etc.
+# Убить процесс
+kill -9 <PID>
+```
 
-### Warehouse Orders
-- id, orderNumber, supplierName, status, expectedDeliveryDate, etc.
+## 📚 Документация
 
-### Warehouse Order Items
-- id, warehouseOrderId, productId, quantity, unitCost, receivedQuantity, etc.
+- [📖 Полная документация Backend](./BACKEND_DOCUMENTATION.md)
+- [🔄 Детали реализации синхронизации](./SYNC_IMPLEMENTATION.md)
+- [⚙️ Пример конфигурации](./env.example)
 
-### Expenses
-- id, description, amount, category, date, vendor, paymentMethod, etc.
+## ⚠️ Критически важно
 
-## 🤝 Contributing
+1. **TypeScript обязателен** - это не опция, а требование
+2. **Компиляция перед запуском** - всегда выполняйте `npm run build`
+3. **Типы Prisma** - генерируйте после изменения схемы
+4. **Не трогайте dist/** - только через компиляцию
+5. **Проверяйте типы** - TypeScript должен компилироваться без ошибок
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+---
 
-## 📄 License
-
-This project is licensed under the MIT License.
-
-## 🆘 Support
-
-For support, email support@sneat.com or open an issue in the repository. 
+**Версия**: 2.0.0 (TypeScript Only)  
+**Порт**: 3011  
+**Последнее обновление**: 08.06.2025

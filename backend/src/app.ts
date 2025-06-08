@@ -9,6 +9,7 @@ import syncRoutes from './routes/sync';
 import userRoutes from './routes/userRoutes';
 import productRoutes from './routes/productRoutes';
 import currencyRoutes from './routes/currencyRoutes';
+import orderRoutes from './routes/orderRoutes';
 
 // Загружаем переменные окружения
 dotenv.config();
@@ -36,6 +37,7 @@ app.use('/api', syncRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api', productRoutes);
 app.use('/api/currency', currencyRoutes);
+app.use('/api', orderRoutes);
 
 // Статические файлы для загруженных изображений
 app.use('/uploads', express.static('uploads'));

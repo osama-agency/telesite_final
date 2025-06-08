@@ -1,5 +1,5 @@
 const cron = require('node-cron');
-const { autoSyncAllUsers } = require('../controllers/SyncController');
+const { autoSyncAll } = require('../controllers/syncController');
 
 /**
  * Schedule automatic synchronization of orders from external API
@@ -29,7 +29,7 @@ class SyncScheduler {
         this.lastRunTime = new Date();
         console.log(`🔄 [${this.lastRunTime.toISOString()}] Starting automatic sync...`);
 
-        const results = await autoSyncAllUsers();
+        const results = await autoSyncAll();
 
         console.log(`✅ [${new Date().toISOString()}] Automatic sync completed successfully`);
         console.log(`📊 Sync results:`, results);
