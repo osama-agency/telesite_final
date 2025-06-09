@@ -98,7 +98,10 @@ const SlideTransition = React.forwardRef<unknown, TransitionProps & { children: 
 const NavbarContent = () => {
   const { range, setRange } = useDateRangeStore()
   const theme = useTheme()
-  const isDesktop = useMediaQuery(theme.breakpoints.up('lg'))
+  const isDesktop = true // useMediaQuery(theme.breakpoints.up('lg'))
+
+  // Debug logging
+  console.log('🖥️ NavbarContent: isDesktop =', isDesktop)
   const pathname = usePathname()
 
   // Скрыть date picker на странице настроек аккаунта
