@@ -70,6 +70,7 @@ model Product {
   description     String?
   price           Decimal  @db.Decimal(10, 2)
   costPrice       Decimal? @map("cost_price") @db.Decimal(10, 2)
+  costPriceTRY    Decimal? @map("cost_price_try") @db.Decimal(10, 2) // Себестоимость в лирах
   stockQuantity   Int      @default(0) @map("stock_quantity")
   brand           String?
   category        String?
@@ -92,5 +93,57 @@ model Product {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
+  // Relations
+  productPrices   ProductPrice[]
+
   @@map("products")
+}
+
+// Новая таблица для хранения истории цен товаров
+model ProductPrice {
+  id            String   @id @default(cuid())
+  productId     Int      @map("product_id")
+  costPriceTRY  Decimal  @map("cost_price_try") @db.Decimal(10, 2)
+  costPriceRUB  Decimal  @map("cost_price_rub") @db.Decimal(10, 2)
+  retailPrice   Decimal  @map("retail_price") @db.Decimal(10, 2)
+  exchangeRate  Decimal  @map("exchange_rate") @db.Decimal(10, 4)
+  effectiveDate DateTime @map("effective_date")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_prices")
+  @@index([productId, effectiveDate])
+}
+
+// Таблица для хранения расходов
+model Expense {
+  id          String    @id @default(cuid())
+  date        DateTime  @default(now())
+  category    String    // 'Логистика', 'Закупка товаров', 'Прочее'
+  amount      Decimal   @db.Decimal(10, 2)
+  comment     String?
+  productId   Int?      @map("product_id") // может быть null для общих расходов
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@map("expenses")
+  @@index([category])
+  @@index([date])
+}
+
+// Таблица для хранения курсов валют
+model ExchangeRate {
+  id            String    @id @default(cuid())
+  currency      String    // 'TRY'
+  rate          Decimal   @db.Decimal(10, 4) // курс к рублю
+  rateWithBuffer Decimal  @map("rate_with_buffer") @db.Decimal(10, 4) // курс с буфером
+  bufferPercent Decimal   @map("buffer_percent") @db.Decimal(5, 2) @default(5) // процент буфера
+  source        String    @default("CBR") // источник курса
+  effectiveDate DateTime  @map("effective_date")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@map("exchange_rates")
+  @@unique([currency, effectiveDate])
+  @@index([currency, effectiveDate])
 }

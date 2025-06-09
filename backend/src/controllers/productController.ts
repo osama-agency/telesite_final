@@ -45,6 +45,7 @@ export const getProducts = async (req: Request, res: Response) => {
         description: product.description,
         price: parseFloat(product.price.toString()),
         costPrice: product.costPrice ? parseFloat(product.costPrice.toString()) : null,
+        costPriceTRY: product.costPriceTRY ? parseFloat(product.costPriceTRY.toString()) : null,
         stockQuantity: stockQuantity,
         stock_quantity: stockQuantity, // для совместимости
         brand: product.brand,
@@ -73,8 +74,10 @@ export const getProducts = async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      data: analyticsProducts,
-      count: analyticsProducts.length
+      data: {
+        products: analyticsProducts,
+        total: analyticsProducts.length
+      }
     });
 
   } catch (error) {
@@ -174,6 +177,88 @@ export const hideProduct = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Ошибка скрытия товара'
+    });
+  }
+};
+
+// Скрытие товара по имени
+export const hideProductByName = async (req: Request, res: Response) => {
+  try {
+    const { productName, isHidden } = req.body;
+
+    if (!productName) {
+      return res.status(400).json({
+        success: false,
+        error: 'Имя товара обязательно'
+      });
+    }
+
+    // Ищем товар по имени
+    const product = await prisma.product.findFirst({
+      where: {
+        name: productName
+      }
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        error: `Товар "${productName}" не найден`
+      });
+    }
+
+    // Обновляем состояние скрытия
+    const updatedProduct = await prisma.product.update({
+      where: {
+        id: product.id
+      },
+      data: {
+        isHidden: isHidden !== undefined ? isHidden : true
+      }
+    });
+
+    console.log(`👁️ ${isHidden ? 'Скрыт' : 'Показан'} товар: ${updatedProduct.name}`);
+
+    res.json({
+      success: true,
+      data: updatedProduct,
+      message: `Товар "${productName}" ${isHidden ? 'скрыт' : 'показан'}`
+    });
+
+  } catch (error) {
+    console.error('❌ Ошибка скрытия товара по имени:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Ошибка скрытия товара'
+    });
+  }
+};
+
+// Получение списка скрытых товаров
+export const getHiddenProducts = async (req: Request, res: Response) => {
+  try {
+    const hiddenProducts = await prisma.product.findMany({
+      where: {
+        isHidden: true
+      },
+      select: {
+        name: true
+      }
+    });
+
+    const hiddenProductNames = hiddenProducts.map(p => p.name);
+
+    res.json({
+      success: true,
+      hiddenProducts: hiddenProductNames,
+      count: hiddenProductNames.length
+    });
+
+  } catch (error) {
+    console.error('❌ Ошибка получения скрытых товаров:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Ошибка получения скрытых товаров'
     });
   }
 };

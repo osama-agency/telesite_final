@@ -14,18 +14,30 @@ import Divider from '@mui/material/Divider'
 import CircularProgress from '@mui/material/CircularProgress'
 import Alert from '@mui/material/Alert'
 
-// Third-party Imports
+// Next.js and Auth Imports
 import { useSession } from 'next-auth/react'
 
 // Component Imports
 import CustomTextField from '@core/components/mui/TextField'
 
-// Hook Imports
-import { useProfile } from '@/hooks/useProfile'
-import type { ProfileUpdateData } from '@/hooks/useProfile'
+// Hooks
+import { useProfileApi } from '@/hooks/useProfileApi'
 
-// Utils Imports
-import { profileToasts } from '@/utils/toast'
+// Stores
+import { useProfileStore, type ProfileUpdateData } from '@/stores/profileStore'
+
+// Utils
+import { profileToasts } from '@/utils/profileToasts'
+
+// Initial Data
+const initialData = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  organization: '',
+  phoneNumber: '',
+  address: ''
+}
 
 type Data = {
   firstName: string
@@ -37,30 +49,35 @@ type Data = {
 }
 
 const AccountDetails = () => {
-  // Hooks
-  const { data: session } = useSession()
-  const { profile, loading, error, updateProfile, uploadAvatar, resetAvatar } = useProfile()
-
   // States
-  const [formData, setFormData] = useState<Data>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    organization: '',
-    phoneNumber: '',
-    address: ''
-  })
   const [fileInput, setFileInput] = useState<string>('')
   const [imgSrc, setImgSrc] = useState<string>('/images/avatars/1.png')
-  const [saving, setSaving] = useState(false)
+  const [formData, setFormData] = useState<Data>(initialData)
+  const [saving, setSaving] = useState<boolean>(false)
 
-      // Обновить форму когда профиль загружен или сессия изменилась
+  // Hooks
+  const { data: session } = useSession()
+  const { getCurrentProfile } = useProfileStore()
+  const { profile, loading, error, updateProfile, uploadAvatar, resetAvatar } = useProfileApi()
+
+  // Effects
   useEffect(() => {
-    console.log('Profile updated:', profile)
-    console.log('Session data:', session)
+    const currentProfile = getCurrentProfile()
 
-    if (profile) {
-      // Используем данные из профиля (из базы данных)
+    if (currentProfile) {
+      setFormData({
+        firstName: currentProfile.firstName || '',
+        lastName: currentProfile.lastName || '',
+        email: currentProfile.email || '',
+        organization: currentProfile.organization || '',
+        phoneNumber: currentProfile.phoneNumber || '',
+        address: currentProfile.address || ''
+      })
+
+      // Устанавливаем аватар с сервера
+      const avatarUrl = currentProfile.avatarUrl || '/images/avatars/1.png'
+      setImgSrc(avatarUrl)
+    } else if (profile) {
       setFormData({
         firstName: profile.firstName || '',
         lastName: profile.lastName || '',
@@ -70,13 +87,9 @@ const AccountDetails = () => {
         address: profile.address || ''
       })
 
-      // Устанавливаем аватар с сервера (если он с uploads, добавляем базовый URL)
+      // Устанавливаем аватар с сервера
       const avatarUrl = profile.avatarUrl || '/images/avatars/1.png'
-      if (avatarUrl.startsWith('/uploads/')) {
-        setImgSrc(`http://localhost:3011${avatarUrl}`)
-      } else {
-        setImgSrc(avatarUrl)
-      }
+      setImgSrc(avatarUrl)
     } else if (session?.user) {
       // Если профиль не найден, используем данные из сессии для инициализации
       const fullName = session.user.name || ''
@@ -93,7 +106,7 @@ const AccountDetails = () => {
 
       setImgSrc(session.user.image || '/images/avatars/1.png')
     }
-  }, [profile, session])
+  }, [profile, session, getCurrentProfile])
 
   const handleFormChange = (field: keyof Data, value: Data[keyof Data]) => {
     setFormData({ ...formData, [field]: value })
@@ -110,18 +123,14 @@ const AccountDetails = () => {
       reader.onload = () => setImgSrc(reader.result as string)
       reader.readAsDataURL(selectedFile)
 
-            try {
+      try {
         setSaving(true)
         console.log('Uploading file:', selectedFile.name, selectedFile.size)
         const avatarUrl = await uploadAvatar(selectedFile)
         console.log('Avatar uploaded, URL:', avatarUrl)
 
         // Обновляем превью с сервера
-        if (avatarUrl.startsWith('/uploads/')) {
-          setImgSrc(`http://localhost:3011${avatarUrl}`)
-        } else {
-          setImgSrc(avatarUrl)
-        }
+        setImgSrc(avatarUrl)
 
         setFileInput('')
         profileToasts.avatarUploaded()
@@ -130,11 +139,7 @@ const AccountDetails = () => {
         profileToasts.uploadError()
         // Возвращаем старое изображение при ошибке
         if (profile?.avatarUrl) {
-          if (profile.avatarUrl.startsWith('/uploads/')) {
-            setImgSrc(`http://localhost:3011${profile.avatarUrl}`)
-          } else {
-            setImgSrc(profile.avatarUrl)
-          }
+          setImgSrc(profile.avatarUrl)
         }
       } finally {
         setSaving(false)
@@ -149,8 +154,8 @@ const AccountDetails = () => {
       const avatarUrl = await resetAvatar()
       console.log('Avatar reset result:', avatarUrl)
       setFileInput('')
-                      setImgSrc(avatarUrl) // Используем URL, полученный от API
-        profileToasts.avatarReset()
+      setImgSrc(avatarUrl) // Используем URL, полученный от API
+      profileToasts.avatarReset()
     } catch (error) {
       console.error('Error resetting avatar:', error)
       profileToasts.resetError()
@@ -159,18 +164,18 @@ const AccountDetails = () => {
     }
   }
 
-    const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     try {
       setSaving(true)
       console.log('Submitting form data:', formData)
-                      const result = await updateProfile(formData as ProfileUpdateData)
-        console.log('Profile update result:', result)
-        profileToasts.profileUpdated()
-      } catch (error) {
-        console.error('Error updating profile:', error)
-        profileToasts.updateError()
+      const result = await updateProfile(formData as ProfileUpdateData)
+      console.log('Profile update result:', result)
+      profileToasts.profileUpdated()
+    } catch (error) {
+      console.error('Error updating profile:', error)
+      profileToasts.updateError()
     } finally {
       setSaving(false)
     }
@@ -270,7 +275,7 @@ const AccountDetails = () => {
                 fullWidth
                 label='Email'
                 value={formData.email}
-                placeholder='ivan.ivanov@example.com'
+                placeholder='ivan@email.com'
                 onChange={e => handleFormChange('email', e.target.value)}
               />
             </Grid>
@@ -279,16 +284,16 @@ const AccountDetails = () => {
                 fullWidth
                 label='Организация'
                 value={formData.organization}
-                placeholder='Название компании'
+                placeholder='ООО "Компания"'
                 onChange={e => handleFormChange('organization', e.target.value)}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <CustomTextField
                 fullWidth
-                label='Номер телефона'
+                label='Телефон'
                 value={formData.phoneNumber}
-                placeholder='+7 (999) 123-45-67'
+                placeholder='+7 900 123-45-67'
                 onChange={e => handleFormChange('phoneNumber', e.target.value)}
               />
             </Grid>
@@ -297,7 +302,7 @@ const AccountDetails = () => {
                 fullWidth
                 label='Адрес'
                 value={formData.address}
-                placeholder='ул. Пушкина, д. 10'
+                placeholder='Москва, ул. Примерная, д. 123'
                 onChange={e => handleFormChange('address', e.target.value)}
               />
             </Grid>
@@ -306,17 +311,11 @@ const AccountDetails = () => {
                 variant='contained'
                 type='submit'
                 disabled={saving}
-                startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <i className='bx-save' />}
+                startIcon={saving ? <CircularProgress size={20} color="inherit" /> : undefined}
               >
                 {saving ? 'Сохранение...' : 'Сохранить изменения'}
               </Button>
-              <Button
-                variant='tonal'
-                type='button'
-                color='secondary'
-                onClick={handleReset}
-                disabled={saving}
-              >
+              <Button variant='tonal' color='secondary' type='reset' onClick={handleReset}>
                 Сбросить
               </Button>
             </Grid>

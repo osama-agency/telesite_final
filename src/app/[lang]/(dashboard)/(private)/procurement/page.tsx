@@ -93,8 +93,21 @@ const ProcurementPage = () => {
   const [tabValue, setTabValue] = useState(0)
   const [purchaseHistory, setPurchaseHistory] = useState<Purchase[]>([])
 
+  // Отладка: логируем тип purchaseHistory
+  console.log('🔍 purchaseHistory type check:', {
+    isArray: Array.isArray(purchaseHistory),
+    type: typeof purchaseHistory,
+    length: purchaseHistory?.length,
+    value: purchaseHistory
+  })
+
   // Загрузка списка товаров
   useEffect(() => {
+    // Убеждаемся что purchaseHistory инициализирован как массив
+    if (!Array.isArray(purchaseHistory)) {
+      setPurchaseHistory([])
+    }
+
     fetchProducts()
     fetchPurchaseHistory()
 
@@ -105,7 +118,7 @@ const ProcurementPage = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true)
-      const response = await fetch('http://localhost:3011/api/products')
+      const response = await fetch('/api/products')
       const data = await response.json()
 
       if (data.success) {
@@ -127,15 +140,19 @@ const ProcurementPage = () => {
   const fetchPurchaseHistory = async () => {
     try {
       console.log('📋 Загрузка истории закупок...')
-      const response = await fetch('http://localhost:3011/api/purchases')
+      const response = await fetch('/api/purchases')
       const data = await response.json()
 
-      if (data.success) {
-        console.log(`✅ Загружено ${data.total} закупок`)
-        setPurchaseHistory(data.data || [])
+      if (data.success && data.data && Array.isArray(data.data.purchases)) {
+        console.log(`✅ Загружено ${data.data.total} закупок`)
+        setPurchaseHistory(data.data.purchases)
+      } else {
+        console.warn('⚠️ Неожиданный формат данных:', data)
+        setPurchaseHistory([])
       }
     } catch (error) {
       console.error('❌ Error fetching purchase history:', error)
+      setPurchaseHistory([])
       showSnackbar('Не удалось загрузить историю закупок', 'error')
     }
   }
@@ -193,7 +210,7 @@ const ProcurementPage = () => {
       setSaving(true)
 
       // 1. Создать запись purchase
-      const purchaseResponse = await fetch('http://localhost:3001/api/purchases', {
+      const purchaseResponse = await fetch('/api/purchases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -222,7 +239,7 @@ const ProcurementPage = () => {
       }
 
       // 3. Добавить расход в Expenses
-              await fetch('http://localhost:3011/api/expenses', {
+              await fetch('/api/expenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -262,6 +279,17 @@ const ProcurementPage = () => {
 
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [purchaseItems])
+
+  // Принудительная защита от undefined purchaseHistory
+  const safePurchaseHistory = Array.isArray(purchaseHistory) ? purchaseHistory : []
+
+  // Дополнительная защита - убеждаемся что все map() используют safe версию
+  useEffect(() => {
+    if (!Array.isArray(purchaseHistory)) {
+      console.error('⚠️ purchaseHistory is not an array:', typeof purchaseHistory, purchaseHistory)
+      setPurchaseHistory([])
+    }
+  }, [purchaseHistory])
 
   return (
     <>
@@ -484,7 +512,7 @@ const ProcurementPage = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {purchaseHistory.length === 0 ? (
+                      {!Array.isArray(safePurchaseHistory) || safePurchaseHistory.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
                             <Typography variant="body2" color="text.secondary">
@@ -493,7 +521,7 @@ const ProcurementPage = () => {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        purchaseHistory.map((purchase) => (
+                        safePurchaseHistory.map((purchase) => (
                           <TableRow key={purchase.id}>
                             <TableCell>{purchase.id}</TableCell>
                             <TableCell>

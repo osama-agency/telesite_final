@@ -99,7 +99,7 @@ const OrderDetailsDrawer = ({ open, onClose, orderId }: OrderDetailsDrawerProps)
       setLoading(true)
       setError(null)
 
-      fetch(`http://localhost:3011/api/orders/${orderId}`)
+      fetch(`/api/orders/${orderId}`)
         .then(res => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`)
 

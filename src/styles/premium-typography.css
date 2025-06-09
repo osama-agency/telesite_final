@@ -1,0 +1,52 @@
+/*
+🎯 ПРЕМИУМ ТИПОГРАФИКА 2025
+Исправление переносов валют и улучшение читаемости финансовых данных
+*/
+
+/* Стили для финансовых ячеек в таблицах */
+.financial-cell {
+  white-space: nowrap !important;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: 0.01em;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  min-width: fit-content;
+}
+
+/* Специально для валютных значений */
+.currency-value {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "kern" 1;
+  white-space: nowrap;
+  letter-spacing: 0.005em;
+  word-spacing: -0.05em; /* Сжимаем пробел перед валютой */
+}
+
+/* Контейнеры для предотвращения переносов */
+.no-wrap {
+  white-space: nowrap !important;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
+/* Выравнивание цифр в таблицах */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Улучшенная читаемость для больших чисел */
+.financial-large {
+  font-size: 0.875rem;
+  line-height: 1.25;
+  font-weight: 500;
+}
+
+/* Стили для валютных символов */
+.currency-symbol {
+  font-weight: 400;
+  opacity: 0.85;
+  margin-left: 0.125em;
+}

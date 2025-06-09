@@ -217,7 +217,8 @@ const AviasalesOrdersTable = () => {
     try {
       setLoading(true)
 
-      const response = await fetch('http://localhost:3011/api/orders')
+      // Используем относительный путь к локальному API
+      const response = await fetch('/api/orders')
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)

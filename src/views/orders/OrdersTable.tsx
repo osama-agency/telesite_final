@@ -150,11 +150,8 @@ const OrdersTable = () => {
     try {
       setLoading(true)
 
-      const response = await fetch('https://strattera.tgapp.online/api/v1/orders', {
-        headers: {
-          'Authorization': '8cM9wVBrY3p56k4L1VBpIBwOsw'
-        }
-      })
+      // Используем локальный API вместо прямого обращения к внешнему
+      const response = await fetch('/api/orders')
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -162,10 +159,10 @@ const OrdersTable = () => {
 
       const data = await response.json()
 
-      // Обрабатываем данные напрямую как массив из API Strattera
-      if (Array.isArray(data)) {
+      // Обрабатываем данные от локального API
+      if (data.success && data.data && Array.isArray(data.data.orders)) {
         // Преобразуем данные в нужный формат
-        const transformedOrders = data.map((order: any) => ({
+        const transformedOrders = data.data.orders.map((order: any) => ({
           id: order.id?.toString() || Math.random().toString(),
           externalId: order.id?.toString() || order.order_id || 'N/A',
           customerName: order.user?.name || order.customer_name || 'Не указан',

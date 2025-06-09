@@ -1,5 +1,5 @@
 // Next Imports
-import { useParams } from 'next/navigation'
+import { useParams, usePathname } from 'next/navigation'
 
 // MUI Imports
 import { useTheme } from '@mui/material/styles'
@@ -13,6 +13,7 @@ import type { VerticalMenuContextProps } from '@menu/components/vertical-menu/Me
 // Component Imports
 import { Menu } from '@menu/vertical-menu'
 import AnimatedMenuItem from './AnimatedMenuItem'
+
 
 // Hook Imports
 import useVerticalNav from '@menu/hooks/useVerticalNav'
@@ -46,6 +47,7 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
   // Hooks
   const theme = useTheme()
   const params = useParams()
+  const pathname = usePathname()
   const verticalNavOptions = useVerticalNav()
 
   // Vars
@@ -53,6 +55,9 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
   const { lang: locale } = params
 
   const ScrollWrapper = isBreakpointReached ? 'div' : PerfectScrollbar
+
+  // Функция для проверки активного состояния
+  const isActive = (href: string) => pathname === href
 
   return (
     <ScrollWrapper

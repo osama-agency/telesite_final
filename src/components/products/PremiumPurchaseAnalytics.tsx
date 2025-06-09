@@ -1393,16 +1393,12 @@ const PremiumPurchaseAnalytics = () => {
 
       console.log(`🔍 Debug: productsArray.length = ${productsArray.length}`)
 
-      // Если массив товаров пустой, создаем тестовые данные
+      // Если массив товаров пустой, показываем сообщение без создания фейковых данных
       if (productsArray.length === 0) {
-        console.warn('📋 API вернул пустой массив товаров, используем тестовые данные')
-        productsArray = [
-          { name: 'Atominex 10 mg', category: 'Медицина', stock_quantity: 15 },
-          { name: 'Atominex 25 mg', category: 'Медицина', stock_quantity: 8 },
-          { name: 'Attex 100 mg', category: 'Медицина', stock_quantity: 22 },
-          { name: 'Abilify 15 mg', category: 'Медицина', stock_quantity: 5 },
-          { name: 'Arislow 2 mg', category: 'Медицина', stock_quantity: 12 }
-        ]
+        console.warn('📋 API вернул пустой массив товаров')
+        setProducts([]);
+        setLoading(false);
+        return;
       }
 
       if (Array.isArray(productsArray)) {
@@ -1443,8 +1439,8 @@ const PremiumPurchaseAnalytics = () => {
               console.log('💡 Debug: Все цены продаж для Atominex 40 mg:', productSalesData.prices)
             }
 
-            // Реальные остатки из API (используем поле stock_quantity)
-            const stock = apiProduct.stock_quantity || Math.floor(Math.random() * 50) + 1
+            // Реальные остатки из API (используем поле stock_quantity, если нет данных - то 0)
+            const stock = apiProduct.stock_quantity || 0
 
             // Рассчитываем среднее потребление на основе реальных продаж за выбранный период
             const calculateDaysInPeriod = () => {
@@ -1622,7 +1618,13 @@ const PremiumPurchaseAnalytics = () => {
             toPurchase: toPurchase,
             costTry: parseFloat(costTry.toFixed(2)),
             costRub: parseFloat(costRub.toFixed(2)),
-            expenses: parseFloat(expenses.toFixed(2)),
+            expenses: expenseBreakdown || {
+              delivery: 350,
+              logistics: parseFloat((expenses * 0.3).toFixed(2)),
+              advertising: parseFloat((expenses * 0.5).toFixed(2)),
+              other: parseFloat((expenses * 0.2).toFixed(2)),
+              total: parseFloat(expenses.toFixed(2))
+            },
             expenseBreakdown: expenseBreakdown,
             totalCostRub: parseFloat(totalCostRub.toFixed(2)),
             retailPrice: parseFloat(retailPrice.toFixed(2)),
@@ -3445,17 +3447,136 @@ const PremiumPurchaseAnalytics = () => {
                           </Typography>
                         </TableCell>
                         <TableCell align="right">
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              fontWeight: 500,
-                              fontSize: '0.875rem',
-                              color: theme.palette.text.secondary,
-                              fontVariantNumeric: 'tabular-nums'
+                          <Tooltip
+                            title={
+                              typeof product.expenses === 'object' ? (
+                                <Box sx={{
+                                  p: 1,
+                                  bgcolor: theme.palette.mode === 'dark' ? '#1e1e1e' : '#ffffff',
+                                  border: `1px solid ${theme.palette.divider}`,
+                                  borderRadius: 1,
+                                  boxShadow: theme.shadows[4]
+                                }}>
+                                  <Typography variant="subtitle2" sx={{
+                                    fontWeight: 600,
+                                    mb: 1,
+                                    color: theme.palette.text.primary
+                                  }}>
+                                    Состав расходов:
+                                  </Typography>
+                                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', minWidth: 200 }}>
+                                      <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                                        Доставка:
+                                      </Typography>
+                                      <Typography variant="body2" sx={{
+                                        fontWeight: 500,
+                                        color: theme.palette.text.primary,
+                                        ml: 2
+                                      }}>
+                                        {formatCurrency(product.expenses.delivery)}
+                                      </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                      <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                                        Логистика:
+                                      </Typography>
+                                      <Typography variant="body2" sx={{
+                                        fontWeight: 500,
+                                        color: theme.palette.text.primary,
+                                        ml: 2
+                                      }}>
+                                        {formatCurrency(product.expenses.logistics)}
+                                      </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                      <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                                        Реклама:
+                                      </Typography>
+                                      <Typography variant="body2" sx={{
+                                        fontWeight: 500,
+                                        color: theme.palette.text.primary,
+                                        ml: 2
+                                      }}>
+                                        {formatCurrency(product.expenses.advertising)}
+                                      </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                      <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                                        Прочее:
+                                      </Typography>
+                                      <Typography variant="body2" sx={{
+                                        fontWeight: 500,
+                                        color: theme.palette.text.primary,
+                                        ml: 2
+                                      }}>
+                                        {formatCurrency(product.expenses.other)}
+                                      </Typography>
+                                    </Box>
+                                    <Divider sx={{ my: 0.5, borderColor: theme.palette.divider }} />
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                      <Typography variant="body2" sx={{
+                                        fontWeight: 600,
+                                        color: theme.palette.text.primary
+                                      }}>
+                                        Итого:
+                                      </Typography>
+                                      <Typography variant="body2" sx={{
+                                        fontWeight: 600,
+                                        color: theme.palette.text.primary,
+                                        ml: 2
+                                      }}>
+                                        {formatCurrency(product.expenses.total)}
+                                      </Typography>
+                                    </Box>
+                                  </Box>
+                                </Box>
+                              ) : (
+                                <Box sx={{
+                                  p: 1,
+                                  bgcolor: theme.palette.mode === 'dark' ? '#1e1e1e' : '#ffffff',
+                                  border: `1px solid ${theme.palette.divider}`,
+                                  borderRadius: 1
+                                }}>
+                                  <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
+                                    Расходы на единицу товара: {formatCurrency(product.expenses)}
+                                  </Typography>
+                                </Box>
+                              )
+                            }
+                            arrow
+                            placement="top"
+                            componentsProps={{
+                              tooltip: {
+                                sx: {
+                                  bgcolor: 'transparent',
+                                  p: 0,
+                                  maxWidth: 300
+                                }
+                              },
+                              arrow: {
+                                sx: {
+                                  color: theme.palette.mode === 'dark' ? '#1e1e1e' : '#ffffff',
+                                  '&::before': {
+                                    border: `1px solid ${theme.palette.divider}`
+                                  }
+                                }
+                              }
                             }}
                           >
-                            +{formatCurrency(typeof product.expenses === 'object' ? product.expenses.total : product.expenses)}
-                          </Typography>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontWeight: 500,
+                                fontSize: '0.875rem',
+                                color: theme.palette.text.secondary,
+                                fontVariantNumeric: 'tabular-nums',
+                                cursor: 'help'
+                              }}
+                            >
+                              +{formatCurrency(typeof product.expenses === 'object' ? product.expenses.total : product.expenses)}
+                            </Typography>
+                          </Tooltip>
                         </TableCell>
                         <TableCell align="right">
                           <Typography

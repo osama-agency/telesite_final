@@ -59,8 +59,9 @@ const UserDropdown = () => {
   const { lang: locale } = useParams()
   const { getDisplayName, getAvatarUrl } = useProfileStore()
 
-  const displayName = getDisplayName()
-  const avatarUrl = getAvatarUrl()
+  // Используем данные сессии как fallback для предотвращения hydration mismatch
+  const displayName = getDisplayName() || session?.user?.name || 'Пользователь'
+  const avatarUrl = getAvatarUrl() || session?.user?.image || '/images/avatars/default.svg'
 
   const handleDropdownOpen = () => {
     !open ? setOpen(true) : setOpen(false)

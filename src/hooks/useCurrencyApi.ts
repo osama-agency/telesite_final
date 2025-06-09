@@ -32,7 +32,7 @@ export const useCurrencyApi = (): UseCurrencyApiReturn => {
       setLoading(true)
       setError(null)
 
-      const response = await fetch('http://localhost:3011/api/currency/rates')
+      const response = await fetch('/api/currency/rates')
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -70,7 +70,7 @@ export const useCurrencyApi = (): UseCurrencyApiReturn => {
       setError(null)
 
       // Обновляем курсы через API
-      const refreshResponse = await fetch('http://localhost:3011/api/currency/refresh', {
+      const refreshResponse = await fetch('/api/currency/refresh', {
         method: 'POST'
       })
 

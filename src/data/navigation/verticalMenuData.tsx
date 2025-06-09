@@ -26,6 +26,11 @@ const verticalMenuData = (): VerticalMenuDataType[] => [
     label: 'Расходы',
     icon: 'bx-money',
     href: '/expenses'
+  },
+  {
+    label: 'Финансовая аналитика',
+    icon: 'bx-trending-up',
+    href: '/financial-analytics'
   }
 ]
 

@@ -4,7 +4,7 @@ import { toast } from 'react-toastify'
 
 import { useProfileStore, type UserProfile, type ProfileUpdateData } from '@/stores/profileStore'
 
-const API_BASE_URL = 'http://localhost:3011/api'
+const API_BASE_URL = '/api'
 
 // Query Keys
 export const profileKeys = {

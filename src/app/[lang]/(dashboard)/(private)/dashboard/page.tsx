@@ -4,53 +4,54 @@
 import Grid from '@mui/material/Grid2'
 
 // Components Imports
-import SalesOverview from '@views/dashboard/SalesOverview'
-import RevenueChart from '@views/dashboard/RevenueChart'
-import OrderStats from '@views/dashboard/OrderStats'
-import Vertical from '@components/card-statistics/Vertical'
-import QuickStats from '@views/dashboard/QuickStats'
-import TopSellingProducts from '@views/dashboard/TopSellingProducts'
-import MonthlyExpenses from '@views/dashboard/MonthlyExpenses'
-import RecentOrders from '@views/dashboard/RecentOrders'
-
+import BusinessKPICards from '@views/dashboard/BusinessKPICards'
+import SalesRevenueChart from '@views/dashboard/SalesRevenueChart'
+import OrderTrendsChart from '@views/dashboard/OrderTrendsChart'
+import ProductPerformanceChart from '@views/dashboard/ProductPerformanceChart'
+import ExpenseAnalysisChart from '@views/dashboard/ExpenseAnalysisChart'
+import ProfitMarginChart from '@views/dashboard/ProfitMarginChart'
+import InventoryStatusChart from '@views/dashboard/InventoryStatusChart'
+import RecentOrdersList from '@views/dashboard/RecentOrdersList'
+import TopProductsAnalysis from '@views/dashboard/TopProductsAnalysis'
 
 const Dashboard = () => {
   return (
     <Grid container spacing={6}>
-      {/* Первый ряд - основные графики */}
-      <Grid size={{ xs: 12, lg: 6 }}>
-        <SalesOverview />
-      </Grid>
-      <Grid size={{ xs: 12, lg: 6 }}>
-        <RevenueChart />
+      {/* KPI Cards - Первый ряд */}
+      <Grid size={{ xs: 12 }}>
+        <BusinessKPICards />
       </Grid>
 
-      {/* Второй ряд - статистики (одинаковая высота) */}
-      <Grid size={{ xs: 12, sm: 6, lg: 3 }} sx={{ display: 'flex', '& > *': { width: '100%' } }}>
-        <MonthlyExpenses />
+      {/* Основные графики - Второй ряд */}
+      <Grid size={{ xs: 12, lg: 8 }}>
+        <SalesRevenueChart />
       </Grid>
-      <Grid size={{ xs: 12, sm: 6, lg: 3 }} sx={{ display: 'flex', '& > *': { width: '100%' } }}>
-        <OrderStats />
-      </Grid>
-      <Grid size={{ xs: 12, sm: 6, lg: 3 }} sx={{ display: 'flex', '& > *': { width: '100%' } }}>
-        <Vertical
-          title='Прибыль'
-          imageSrc='/images/cards/cube-secondary-bg.png'
-          stats='₽0'
-          trendNumber={0}
-          trend='positive'
-        />
-      </Grid>
-      <Grid size={{ xs: 12, sm: 6, lg: 3 }} sx={{ display: 'flex', '& > *': { width: '100%' } }}>
-        <QuickStats />
+      <Grid size={{ xs: 12, lg: 4 }}>
+        <ProfitMarginChart />
       </Grid>
 
-      {/* Третий ряд - таблицы (одинаковая высота) */}
-      <Grid size={{ xs: 12, lg: 4 }} sx={{ display: 'flex', '& > *': { width: '100%' } }}>
-        <TopSellingProducts />
+      {/* Детальная аналитика - Третий ряд */}
+      <Grid size={{ xs: 12, md: 6 }}>
+        <OrderTrendsChart />
       </Grid>
-      <Grid size={{ xs: 12, lg: 8 }} sx={{ display: 'flex', '& > *': { width: '100%' } }}>
-        <RecentOrders />
+      <Grid size={{ xs: 12, md: 6 }}>
+        <ExpenseAnalysisChart />
+      </Grid>
+
+      {/* Товарная аналитика - Четвертый ряд */}
+      <Grid size={{ xs: 12, lg: 7 }}>
+        <ProductPerformanceChart />
+      </Grid>
+      <Grid size={{ xs: 12, lg: 5 }}>
+        <InventoryStatusChart />
+      </Grid>
+
+      {/* Списки и таблицы - Пятый ряд */}
+      <Grid size={{ xs: 12, lg: 8 }}>
+        <RecentOrdersList />
+      </Grid>
+      <Grid size={{ xs: 12, lg: 4 }}>
+        <TopProductsAnalysis />
       </Grid>
     </Grid>
   )

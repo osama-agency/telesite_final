@@ -24,7 +24,7 @@ export interface ProfileUpdateData {
   address: string;
 }
 
-const API_BASE_URL = 'http://localhost:3011/api';
+const API_BASE_URL = '/api';
 
 export const useProfile = () => {
   const { data: session } = useSession();

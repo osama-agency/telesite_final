@@ -1,5 +1,5 @@
 // Next Imports
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 import type { UserTable } from './users'
 
@@ -8,32 +8,38 @@ type ResponseUser = Omit<UserTable, 'password'>
 // Mock data for demo purpose
 import { users } from './users'
 
-export async function POST(req: Request) {
-  // Vars
-  const { email, password } = await req.json()
-  const user = users.find(u => u.email === email && u.password === password)
-  let response: null | ResponseUser = null
+export async function POST(request: NextRequest) {
+  try {
+    const { email, password } = await request.json()
 
-  if (user) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _, ...filteredUserData } = user
-
-    response = {
-      ...filteredUserData
+    // Простая проверка для демо
+    if (email === 'go@osama.agency' && password === 'sfera13') {
+      return NextResponse.json({
+        id: '1',
+        name: 'Root Admin',
+        email: 'go@osama.agency',
+        role: 'admin'
+      })
     }
 
-    return NextResponse.json(response)
-  } else {
-    // We return 401 status code and error message if user is not found
+    // Дополнительные тестовые пользователи
+    if (email === 'admin@test.com' && password === 'admin123') {
+      return NextResponse.json({
+        id: '2',
+        name: 'Test Admin',
+        email: 'admin@test.com',
+        role: 'admin'
+      })
+    }
+
     return NextResponse.json(
-      {
-        // We create object here to separate each error message for each field in case of multiple errors
-        message: ['Email or Password is invalid']
-      },
-      {
-        status: 401,
-        statusText: 'Unauthorized Access'
-      }
+      { error: 'Invalid credentials' },
+      { status: 401 }
+    )
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
     )
   }
 }

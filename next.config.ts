@@ -2,6 +2,18 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   basePath: process.env.BASEPATH,
+  async rewrites() {
+    return [
+      {
+        source: '/api/auth/:path*',
+        destination: '/api/auth/:path*' // NextAuth остается локальным
+      },
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:3011/api/:path*'
+      }
+    ]
+  },
   redirects: async () => {
     return [
       {

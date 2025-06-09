@@ -489,14 +489,23 @@ export const autoSyncAll = async (): Promise<any> => {
   try {
     console.log('🤖 Starting automatic sync of all data...');
 
+    // Рассчитываем дату 1 месяц назад для синхронизации
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    oneMonthAgo.setHours(0, 0, 0, 0); // Начало дня
+
+    console.log(`📅 Will sync orders from: ${oneMonthAgo.toISOString()}`);
+
     const results = {
-      orders: { success: false, count: 0, error: null as any },
+      orders: { success: false, count: 0, skipped: 0, error: null as any },
       products: { success: false, count: 0, error: null as any }
     };
 
     // Синхронизация заказов
     try {
       console.log('📦 Syncing orders...');
+
+      // Получаем свежие данные из API (БЕЗ удаления старых заказов)
       const ordersResponse = await axios.get('https://strattera.tgapp.online/api/v1/orders', {
         headers: {
           'Authorization': '8cM9wVBrY3p56k4L1VBpIBwOsw'
@@ -505,6 +514,9 @@ export const autoSyncAll = async (): Promise<any> => {
 
       const externalOrders = ordersResponse.data;
       let orderCount = 0;
+      let skippedOldOrders = 0;
+
+      console.log(`📦 Processing ${externalOrders.length} orders from API...`);
 
       for (const externalOrder of externalOrders) {
         try {
@@ -526,6 +538,12 @@ export const autoSyncAll = async (): Promise<any> => {
           );
 
           if (isNaN(orderDate.getTime())) continue;
+
+          // 🎯 ФИЛЬТР: Синхронизируем только заказы за последний месяц (но НЕ удаляем старые)
+          if (orderDate < oneMonthAgo) {
+            skippedOldOrders++;
+            continue;
+          }
 
           await prisma.order.upsert({
             where: {
@@ -570,12 +588,13 @@ export const autoSyncAll = async (): Promise<any> => {
         }
       }
 
-      results.orders = { success: true, count: orderCount, error: null };
+      console.log(`✅ Orders sync completed: ${orderCount} processed, ${skippedOldOrders} skipped (older than 1 month)`);
+      results.orders = { success: true, count: orderCount, skipped: skippedOldOrders, error: null };
     } catch (error) {
       results.orders.error = error instanceof Error ? error.message : 'Unknown error';
     }
 
-    // Синхронизация товаров
+    // Синхронизация товаров (без изменений)
     try {
       console.log('🛍️ Syncing products...');
       const productsResponse = await axios.get('https://strattera.tgapp.online/api/v1/products', {
