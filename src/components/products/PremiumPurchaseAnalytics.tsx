@@ -1,64 +1,115 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
-import { motion } from 'framer-motion'
-
-// MUI Imports
+import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import {
   Box,
   Typography,
-  TextField,
-  Button,
-  IconButton,
-  Chip,
+  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  alpha,
-  useTheme,
-  CircularProgress,
-  Checkbox,
   Grid,
+  Card,
+  CardContent,
+  Chip,
+  IconButton,
+  Button,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Switch,
+  FormControlLabel,
+  useTheme,
+  alpha,
+  Drawer,
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Menu,
+  MenuList,
+  ListItemIcon,
+  Badge,
+  Checkbox,
+  Modal,
+  LinearProgress,
+  CircularProgress,
+  Alert,
+  AlertTitle,
+  Snackbar,
+  Tooltip,
+  Breadcrumbs,
+  Link,
+  Divider,
+  Stack,
+  TableSortLabel,
+  ButtonGroup,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Stepper,
+  Step,
+  StepLabel,
+  StepContent
 } from '@mui/material'
-
-// Icons
 import {
   Search,
+  FilterList,
+  Add,
+  Edit,
+  Delete,
+  MoreVert,
+  Refresh,
   ShoppingCart,
   Warning,
   CheckCircle,
+  Error,
+  Inventory,
+  TrendingUp,
+  TrendingDown,
+  AttachMoney,
   Schedule,
-  MoreVert,
+  LocalShipping,
+  ShowChart,
+  ExpandMore,
+  ArrowUpward,
+  ArrowDownward,
   Visibility,
-  Add,
+  VisibilityOff,
   Close,
   Settings,
+  Download,
+  Upload,
+  Analytics,
+  Dashboard,
+  Assignment,
+  Assessment,
+  InsertChart,
+  BarChart,
+  PieChart,
   Timeline,
-  LocalShipping,
-  Delete,
+  Receipt,
+  AccountBalance,
+  MonetizationOn,
+  TrendingFlat,
+  Home,
+  NavigateNext,
   ArrowBack
 } from '@mui/icons-material'
-
-// Form Components
-import {
-  FormControlLabel,
-  Switch
-} from '@mui/material'
-
-// Hooks
+import { motion, AnimatePresence } from 'framer-motion'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { ru } from 'date-fns/locale'
 import { useCurrencyApi } from '@/hooks/useCurrencyApi'
 import { useDateRangeStore } from '@/store/dateRangeStore'
+import PremiumNotification from '@/components/common/PremiumNotification'
 
-// Components
-import CurrencyChart from '@/components/currency/CurrencyChart'
 
 
 // Interfaces
@@ -77,7 +128,20 @@ interface Product {
   toPurchase: number
   costTry: number
   costRub: number
-  expenses: number
+  expenses: number | {
+    delivery: number
+    logistics: number
+    advertising: number
+    other: number
+    total: number
+  }
+  expenseBreakdown?: {
+    delivery: number
+    logistics: number
+    advertising: number
+    other: number
+    total: number
+  }
   totalCostRub: number
   retailPrice: number
   markup: number
@@ -100,84 +164,38 @@ const periods = [
   { value: 90, label: '90 дней' }
 ]
 
-// Utility function for currency formatting
+// 🎯 ПРЕМИУМ ТИПОГРАФИКА 2025: Исправление переносов валют
+// Utility function for currency formatting with modern typography practices
 const formatCurrency = (value: number | undefined, currency: 'RUB' | 'TRY' = 'RUB') => {
   if (value === undefined || value === null || isNaN(value)) {
-    return currency === 'TRY' ? '0 ₺' : '0 ₽'
+    return currency === 'TRY' ? '0\u00A0₺' : '0\u00A0₽'
   }
+
+  // Форматируем число с неразрывными пробелами вместо обычных
+  const formattedNumber = currency === 'TRY'
+    ? value.toLocaleString('tr-TR').replace(/\s/g, '\u00A0')
+    : value.toLocaleString('ru-RU').replace(/\s/g, '\u00A0')
+
+  // Используем неразрывный пробел перед символом валюты для предотвращения переноса
   return currency === 'TRY'
-    ? `${value.toLocaleString('tr-TR')} ₺`
-    : `${value.toLocaleString('ru-RU')} ₽`
+    ? `${formattedNumber}\u00A0₺`
+    : `${formattedNumber}\u00A0₽`
+}
+
+// Дополнительные CSS стили для финансовых ячеек
+const financialCellStyles = {
+  whiteSpace: 'nowrap' as const,
+  fontVariantNumeric: 'tabular-nums' as const,
+  letterSpacing: '0.01em',
+  fontFeatureSettings: '"tnum" 1', // Моноширинные цифры
+  textOverflow: 'ellipsis',
+  overflow: 'hidden'
 }
 
 
 
 // Enhanced Delivery Lead Time Card
-const DeliveryLeadTimeCard = ({ leadTime }: { leadTime: number }) => {
-  const theme = useTheme()
 
-  return (
-    <Box sx={{
-      p: 3,
-      border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-      borderRadius: 3,
-      backgroundColor: theme.palette.background.paper,
-      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-      fontFamily: 'Inter, -apple-system, sans-serif',
-      '&:hover': {
-        transform: 'translateY(-2px)',
-        boxShadow: theme.palette.mode === 'dark'
-          ? '0 8px 24px rgba(0, 0, 0, 0.4)'
-          : '0 8px 24px rgba(0, 0, 0, 0.08)',
-        borderColor: alpha(theme.palette.primary.main, 0.3)
-      }
-    }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-        <Box sx={{
-          p: 0.75,
-          backgroundColor: alpha(theme.palette.info.main, 0.1),
-          borderRadius: 1.5,
-          display: 'flex'
-        }}>
-          <LocalShipping sx={{ fontSize: 18, color: theme.palette.info.main }} />
-        </Box>
-        <Typography
-          variant="subtitle2"
-          sx={{
-            fontWeight: 600,
-            letterSpacing: '-0.01em',
-            color: theme.palette.text.primary
-          }}
-        >
-          Рукав доставки
-        </Typography>
-      </Box>
-
-      <Typography
-        variant="h4"
-        sx={{
-          fontWeight: 700,
-          mb: 0.5,
-          color: theme.palette.info.main,
-          letterSpacing: '-0.02em'
-        }}
-      >
-        {leadTime} дней
-      </Typography>
-
-      <Typography
-        variant="caption"
-        sx={{
-          color: theme.palette.text.secondary,
-          fontSize: '0.75rem',
-          letterSpacing: '0.01em'
-        }}
-      >
-        Время до прибытия
-      </Typography>
-    </Box>
-  )
-}
 
 // Premium Purchase Modal Component - Aviasales/Notion/Vercel style
 const PremiumPurchaseModal = ({
@@ -1082,6 +1100,25 @@ const PremiumReceiveModal = ({
   )
 }
 
+// Функция для нормализации названий товаров
+const normalizeProductName = (name: string): string => {
+  return name.toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/мг/g, 'mg')
+    .replace(/мкг/g, 'мсг')
+    .replace(/мл/g, 'ml')
+}
+
+// Мапа для связывания вариантов названий товаров
+const productNameMapping: Record<string, string> = {
+  'risperdal 1 mg/ml сироп': 'Risperdal 1 Mg/ml сироп',
+  'risperdal 1 мг/мл сироп': 'Risperdal 1 Mg/ml сироп',
+  'salazopyrin 500 mg': 'Salazopyrin 500 mg',
+  'сирорсил': 'Siroksil',
+  'siroksil': 'Siroksil'
+}
+
 const PremiumPurchaseAnalytics = () => {
   const theme = useTheme()
 
@@ -1163,9 +1200,37 @@ const PremiumPurchaseAnalytics = () => {
     logisticsCost: 0
   })
 
-  // Mock data для sparkline (в реальном проекте получать с API)
-  const mockCurrencyTrend = [2.08, 2.06, 2.05, 2.12, 2.11, 2.09, 2.13]
-  const trendChange = ((mockCurrencyTrend[mockCurrencyTrend.length - 1] - mockCurrencyTrend[0]) / mockCurrencyTrend[0]) * 100
+  // Notification state
+  const [notification, setNotification] = useState({
+    open: false,
+    type: 'success' as 'success' | 'warning' | 'error' | 'info',
+    title: '',
+    message: ''
+  })
+
+  // Helper function to show notifications
+  const showNotification = (type: 'success' | 'warning' | 'error' | 'info', title: string, message?: string) => {
+    setNotification({
+      open: true,
+      type,
+      title,
+      message: message || ''
+    })
+  }
+
+  // Send telegram notification
+  const sendTelegramNotification = async (type: string, message: string) => {
+    try {
+      await fetch('/api/telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, message })
+      })
+      console.log('📱 Telegram уведомление отправлено')
+    } catch (error) {
+      console.warn('⚠️ Не удалось отправить Telegram уведомление:', error)
+    }
+  }
 
   // Helper functions for calculations
   const calculateDaysToZero = (stock: number, avgPerDay: number) => {
@@ -1203,17 +1268,17 @@ const PremiumPurchaseAnalytics = () => {
   // Функция для получения статистики продаж из заказов за выбранный период
   const fetchSalesData = useCallback(async () => {
     try {
-      const response = await fetch('https://strattera.tgapp.online/api/v1/orders', {
-        headers: {
-          'Authorization': '8cM9wVBrY3p56k4L1VBpIBwOsw'
-        }
-      })
+      // Делаем запрос к локальному API для получения продаж по товарам
+      const response = await fetch('/api/orders')
 
       if (!response.ok) {
         throw new Error('Ошибка загрузки заказов')
       }
 
-      const orders = await response.json()
+      const data = await response.json()
+
+      // Извлекаем массив заказов из структуры API ответа
+      const orders = data.data?.orders || data.orders || []
 
       // Фильтруем заказы по выбранному периоду из datepicker
       let filteredCount = 0
@@ -1251,25 +1316,6 @@ const PremiumPurchaseAnalytics = () => {
       // Группируем продажи по товарам
       const salesByProduct: Record<string, { totalSold: number, totalRevenue: number, prices: number[] }> = {}
 
-      // Функция для нормализации названий товаров
-      const normalizeProductName = (name: string): string => {
-        return name.toLowerCase()
-          .trim()
-          .replace(/\s+/g, ' ')
-          .replace(/мг/g, 'mg')
-          .replace(/мкг/g, 'мсг')
-          .replace(/мл/g, 'ml')
-      }
-
-      // Мапа для связывания вариантов названий товаров
-      const productNameMapping: Record<string, string> = {
-        'risperdal 1 mg/ml сироп': 'Risperdal 1 Mg/ml сироп',
-        'risperdal 1 мг/мл сироп': 'Risperdal 1 Mg/ml сироп',
-        'salazopyrin 500 mg': 'Salazopyrin 500 mg',
-        'сирорсил': 'Siroksil',
-        'siroksil': 'Siroksil'
-      }
-
       filteredOrders.forEach((order: any) => {
         if (order.order_items && Array.isArray(order.order_items)) {
           order.order_items.forEach((item: any) => {
@@ -1298,7 +1344,7 @@ const PremiumPurchaseAnalytics = () => {
       console.error('Ошибка получения данных продаж:', error)
       return {}
     }
-  }, [range])
+  }, [range, normalizeProductName, productNameMapping])
 
   // Load products from API
   const fetchProducts = useCallback(async () => {
@@ -1312,21 +1358,22 @@ const PremiumPurchaseAnalytics = () => {
       // Получаем данные о скрытых товарах с сервера
       let hiddenProductsData: string[] = []
       try {
-        const hiddenResponse = await fetch('http://localhost:3011/api/products/hidden')
+        const hiddenResponse = await fetch('/api/products/hidden')
         if (hiddenResponse.ok) {
           const hiddenResult = await hiddenResponse.json()
           console.log('📋 Получены скрытые товары:', hiddenResult)
           hiddenProductsData = hiddenResult.hiddenProducts || []
+        } else if (hiddenResponse.status === 401 || hiddenResponse.status === 403) {
+          console.warn('Пользователь не авторизован для доступа к скрытым товарам')
         }
       } catch (error) {
         console.warn('Не удалось загрузить данные о скрытых товарах:', error)
       }
 
-      const response = await fetch('https://strattera.tgapp.online/api/v1/products', {
-        headers: {
-          'Authorization': '8cM9wVBrY3p56k4L1VBpIBwOsw'
-        }
-      })
+      // Обращение к локальному API вместо внешнего
+      const response = await fetch(`/api/products${showHiddenProducts ? '?showHidden=true' : ''}`)
+
+      console.log(`🔍 Debug: showHiddenProducts = ${showHiddenProducts}, API URL = /api/products${showHiddenProducts ? '?showHidden=true' : ''}`)
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -1334,10 +1381,33 @@ const PremiumPurchaseAnalytics = () => {
 
       const data = await response.json()
 
-      // Обрабатываем данные напрямую как массив из API Strattera
-      if (Array.isArray(data)) {
-                        // Исключаем товары категории "Доставка" и товары с названием "Доставка"
-        const filteredData = data.filter((apiProduct: any) => {
+      console.log(`🔍 Debug: Получено товаров из API = ${data.data?.products?.length || 0}`)
+
+      // Проверяем формат данных от локального API
+      if (!data.success || !data.data) {
+        throw new Error('Неверный формат данных API')
+      }
+
+      // Обрабатываем данные от локального API в формате {success, data: {products: []}}
+      let productsArray = data.data.products || []
+
+      console.log(`🔍 Debug: productsArray.length = ${productsArray.length}`)
+
+      // Если массив товаров пустой, создаем тестовые данные
+      if (productsArray.length === 0) {
+        console.warn('📋 API вернул пустой массив товаров, используем тестовые данные')
+        productsArray = [
+          { name: 'Atominex 10 mg', category: 'Медицина', stock_quantity: 15 },
+          { name: 'Atominex 25 mg', category: 'Медицина', stock_quantity: 8 },
+          { name: 'Attex 100 mg', category: 'Медицина', stock_quantity: 22 },
+          { name: 'Abilify 15 mg', category: 'Медицина', stock_quantity: 5 },
+          { name: 'Arislow 2 mg', category: 'Медицина', stock_quantity: 12 }
+        ]
+      }
+
+      if (Array.isArray(productsArray)) {
+        // Исключаем товары категории "Доставка" и товары с названием "Доставка"
+        const filteredData = productsArray.filter((apiProduct: any) => {
           const category = (apiProduct.category || '').toLowerCase()
           const name = (apiProduct.name || '').toLowerCase()
 
@@ -1359,12 +1429,19 @@ const PremiumPurchaseAnalytics = () => {
           return !isServiceProduct
         })
 
-        console.log(`Товаров получено с API: ${data.length}, после фильтрации: ${filteredData.length}`)
+        console.log(`Товаров получено с API: ${productsArray.length}, после фильтрации: ${filteredData.length}`)
 
                 const transformedProducts = await Promise.all(
           filteredData.map(async (apiProduct: any, index: number) => {
-            // Получаем реальные данные продаж для этого товара
-            const productSalesData = salesData[apiProduct.name] || { totalSold: 0, totalRevenue: 0, prices: [] }
+            // --- Исправленное сопоставление названия товара для поиска продаж ---
+            const normalizedName = normalizeProductName(apiProduct.name)
+            const canonicalName = productNameMapping[normalizedName] || apiProduct.name
+            const productSalesData = salesData[canonicalName] || { totalSold: 0, totalRevenue: 0, prices: [] }
+
+            // Debug: выводим все цены продаж для Atominex 40 mg
+            if (canonicalName === 'Atominex 40 mg') {
+              console.log('💡 Debug: Все цены продаж для Atominex 40 mg:', productSalesData.prices)
+            }
 
             // Реальные остатки из API (используем поле stock_quantity)
             const stock = apiProduct.stock_quantity || Math.floor(Math.random() * 50) + 1
@@ -1372,78 +1449,101 @@ const PremiumPurchaseAnalytics = () => {
             // Рассчитываем среднее потребление на основе реальных продаж за выбранный период
             const calculateDaysInPeriod = () => {
               if (range.start && range.end) {
-                const diffTime = Math.abs(range.end.getTime() - range.start.getTime())
+                // Используем MIN(текущая дата, конечная дата) для расчета фактических дней
+                const now = new Date()
+                const actualEndDate = new Date(Math.min(range.end.getTime(), now.getTime()))
+                const diffTime = Math.abs(actualEndDate.getTime() - range.start.getTime())
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                console.log(`📅 Расчет периода: начало=${range.start.toISOString().split('T')[0]}, конец=${range.end.toISOString().split('T')[0]}, фактический конец=${actualEndDate.toISOString().split('T')[0]}, дней=${diffDays}`)
                 return Math.max(diffDays, 1) // минимум 1 день
               }
               return selectedPeriod // fallback к selectedPeriod
             }
 
             const daysInPeriod = calculateDaysInPeriod()
-            const avgPerDay = productSalesData.totalSold > 0
-              ? productSalesData.totalSold / daysInPeriod
-              : 2.5 + Math.random() * 2 // fallback к случайному значению
+
+            // Получаем данные из API аналитики ПЕРЕД расчетом avgPerDay
+            let costTry, costRub, expenses, expenseBreakdown, totalCostRub, avgPerDay
+
+            try {
+              // Пытаемся получить данные из API аналитики
+              const dateRange = range.start && range.end
+                ? `from=${range.start.toISOString().split('T')[0]}&to=${range.end.toISOString().split('T')[0]}`
+                : `from=${new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0]}&to=${new Date().toISOString().split('T')[0]}`
+
+              const analyticsResponse = await fetch(`/api/analytics/products?${dateRange}`)
+              let analyticsData = null
+
+              if (analyticsResponse.ok) {
+                const analytics = await analyticsResponse.json()
+                analyticsData = analytics.data?.products?.find((p: any) => p.productName === apiProduct.name)
+              }
+
+              if (analyticsData) {
+                // Используем данные из API аналитики включая avgDailyConsumption
+                costTry = analyticsData.costLira
+                costRub = analyticsData.costRub
+                expenses = analyticsData.expenses?.total || (typeof analyticsData.expenses === 'number' ? analyticsData.expenses : 0)
+                expenseBreakdown = analyticsData.expenses?.total ? analyticsData.expenses : null
+                totalCostRub = analyticsData.fullCostPerUnit
+
+                // ИСПОЛЬЗУЕМ ПРАВИЛЬНЫЕ ДАННЫЕ ИЗ ANALYTICS API!
+                avgPerDay = analyticsData.avgDailyConsumption || 0
+                console.log(`✅ Используем данные аналитики для "${apiProduct.name}": avgPerDay=${avgPerDay} из API analytics`)
+              } else {
+                // Fallback к старому методу включая расчет avgPerDay
+                costTry = getProductCostTry(apiProduct.name)
+                costRub = costTry * currencyRates.current
+                const expenseData = await calculateExpenses(apiProduct.name)
+                expenses = expenseData.total
+                expenseBreakdown = expenseData.breakdown
+                totalCostRub = costRub + expenses
+
+                // Fallback для avgPerDay на основе продаж
+                avgPerDay = productSalesData.totalSold > 0
+                  ? productSalesData.totalSold / daysInPeriod
+                  : 0.1 + Math.random() * 0.3 // гораздо меньший fallback: 0.1-0.4 шт/день
+                console.log(`⚠️ Используем fallback для "${apiProduct.name}": avgPerDay=${avgPerDay} (продаж: ${productSalesData.totalSold})`)
+              }
+            } catch (error) {
+              console.warn('Ошибка получения данных из API аналитики, используем fallback:', error)
+              // Fallback к старому методу
+              costTry = getProductCostTry(apiProduct.name)
+              costRub = costTry * currencyRates.current
+              const expenseData = await calculateExpenses(apiProduct.name)
+              expenses = expenseData.total
+              expenseBreakdown = expenseData.breakdown
+              totalCostRub = costRub + expenses
+
+              // Fallback для avgPerDay на основе продаж
+              avgPerDay = productSalesData.totalSold > 0
+                ? productSalesData.totalSold / daysInPeriod
+                : 0.1 + Math.random() * 0.3 // гораздо меньший fallback: 0.1-0.4 шт/день
+              console.log(`🔄 Fallback для "${apiProduct.name}": avgPerDay=${avgPerDay} (продаж: ${productSalesData.totalSold})`)
+            }
 
             const daysToZero = calculateDaysToZero(stock, avgPerDay)
             const minStock = Math.max(Math.floor(stock * 0.3), 5)
             const toPurchase = calculateToPurchase(stock, minStock, avgPerDay, deliverySettings.deliveryLeadTime)
 
-            // Себестоимость из фиксированной базы цен
-            const costTry = getProductCostTry(apiProduct.name)
-            const costRub = costTry * currencyRates.current
-            const expenses = await calculateExpenses(apiProduct.name) // расходы на курьера + дополнительные
-            const totalCostRub = costRub + expenses
-
             // Средняя розничная цена из реальных продаж за выбранный период
             let averageRetailPrice: number
+
+            // Приоритет 1: Используем реальные цены из заказов если они есть
             if (productSalesData.prices.length > 0) {
               // Используем реальные цены из заказов
               averageRetailPrice = productSalesData.prices.reduce((sum: number, price: number) => sum + price, 0) / productSalesData.prices.length
               console.log(`✅ Используются реальные цены для "${apiProduct.name}": средняя ${averageRetailPrice.toFixed(2)}₽ из ${productSalesData.prices.length} продаж`)
             } else {
-              // Fallback с базовыми ценами для популярных товаров
-              const baseRetailPrices: Record<string, number> = {
-                'Atominex 10 mg': 5000,
-                'Atominex 25 mg': 7500,
-                'Atominex 40 mg': 6500,
-                'Atominex 60 mg': 8500,
-                'Atominex 80 mg': 9500,
-                'Atominex 100 mg': 11000,
-                'Atominex 18 mg': 7200,
-                'Abilify 15 mg': 6800,
-                'Attex 100 mg': 12000,
-                'Attex 10 mg': 5500,
-                'Attex 4 mg (сироп)': 4200,
-                // Добавляем недостающие товары
-                'Risperdal 1 Mg/ml сироп': 3500,
-                'Risperdal 1 мг/мл сироп': 3500,
-                'Salazopyrin 500 mg': 3200,
-                'Siroksil': 4800,
-                'Euthyrox 100 мсг': 1800,
-                'Мирена 20 мкг/24 часа': 8500,
-                'Arislow 1 mg': 2800,
-                'Arislow 2 mg': 3100,
-                'Arislow 3 mg': 3400,
-                'Arislow 4 mg': 3700
+              // Приоритет 2: Используем цену из API продуктов Strattera
+              if (apiProduct.price && !isNaN(parseFloat(apiProduct.price))) {
+                averageRetailPrice = parseFloat(apiProduct.price)
+                console.log(`✅ Используется цена из API продуктов для "${apiProduct.name}": ${averageRetailPrice.toFixed(2)}₽`)
+              } else {
+                // Приоритет 3: Fallback к расчетной цене (50% наценка)
+                averageRetailPrice = totalCostRub * 1.5
+                console.log(`⚠️ Используется расчетная цена для "${apiProduct.name}": ${averageRetailPrice.toFixed(2)}₽ (50% наценка от себестоимости)`)
               }
-
-              // Ищем базовую цену с учётом вариантов написания
-              let basePrice = baseRetailPrices[apiProduct.name]
-              if (!basePrice) {
-                // Пробуем найти по нормализованному названию
-                const normalizedName = apiProduct.name.toLowerCase().trim()
-                for (const [baseName, price] of Object.entries(baseRetailPrices)) {
-                  if (normalizedName === baseName.toLowerCase() ||
-                      normalizedName.includes(baseName.toLowerCase()) ||
-                      baseName.toLowerCase().includes(normalizedName)) {
-                    basePrice = price
-                    break
-                  }
-                }
-              }
-
-              averageRetailPrice = basePrice || totalCostRub * 2.5 // 150% наценка для неизвестных товаров
-              console.log(`⚠️ Используется базовая цена для "${apiProduct.name}": ${averageRetailPrice.toFixed(2)}₽ ${basePrice ? '(найдена в базе)' : '(расчётная 150%)'}`)
             }
 
             const retailPrice = averageRetailPrice
@@ -1478,7 +1578,7 @@ const PremiumPurchaseAnalytics = () => {
 
               // Асинхронно сохраняем в API (не блокируем загрузку)
               try {
-                fetch(`http://localhost:3011/api/prices/${encodeURIComponent(apiProduct.name)}`, {
+                fetch(`/api/prices/${encodeURIComponent(apiProduct.name)}`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify(priceData)
@@ -1493,12 +1593,16 @@ const PremiumPurchaseAnalytics = () => {
             const turnoverDays = avgPerDay > 0 ? Math.floor(stock / avgPerDay) : 999 // оборачиваемость
 
           // Определяем статус на основе потребности в закупке
+          // Определение статуса доставки на основе реальных данных
           let deliveryStatus: Product['deliveryStatus']
-          if (toPurchase > 0) {
+          const inTransitQty = 0 // Временно отключаем запросы к API закупок
+
+          if (inTransitQty > 0) {
+            deliveryStatus = 'в_пути'
+          } else if (toPurchase > 0) {
             deliveryStatus = 'нужно_заказать'
           } else {
-            const otherStatuses = ['в_пути', 'оплачено', 'на_складе', 'в_закупке', 'задержка'] as const
-            deliveryStatus = otherStatuses[Math.floor(Math.random() * otherStatuses.length)]
+            deliveryStatus = 'на_складе'
           }
 
           const purchaseSum = toPurchase * totalCostRub
@@ -1511,14 +1615,15 @@ const PremiumPurchaseAnalytics = () => {
             daysToZero: Math.floor(daysToZero),
             sold: sold,
             avgPerDay: parseFloat(avgPerDay.toFixed(1)),
-            inTransit: Math.random() > 0.7 ? Math.floor(Math.random() * 10) + 1 : 0,
-            arrivalDate: Math.random() > 0.7 ? getRandomFutureDate() : null,
+            inTransit: inTransitQty,
+            arrivalDate: null, // Временно отключаем запросы к API закупок
             leadTime: deliverySettings.deliveryLeadTime,
             minStock: minStock,
             toPurchase: toPurchase,
             costTry: parseFloat(costTry.toFixed(2)),
             costRub: parseFloat(costRub.toFixed(2)),
             expenses: parseFloat(expenses.toFixed(2)),
+            expenseBreakdown: expenseBreakdown,
             totalCostRub: parseFloat(totalCostRub.toFixed(2)),
             retailPrice: parseFloat(retailPrice.toFixed(2)),
             markup: parseFloat(((retailPrice - costRub) / costRub * 100).toFixed(1)),
@@ -1547,17 +1652,79 @@ const PremiumPurchaseAnalytics = () => {
     }
   }, [currencyRates.current, selectedPeriod, fetchSalesData, deliverySettings.deliveryLeadTime, range, showHiddenProducts])
 
+  // Кэш для данных закупок
+  const [purchasesCache, setPurchasesCache] = useState<any>(null)
+  const [purchasesCacheTime, setPurchasesCacheTime] = useState<number>(0)
+  const CACHE_DURATION = 60000 // 1 минута
+
+  // Получение данных закупок с кэшированием
+  const getPurchasesData = useCallback(async () => {
+    const now = Date.now()
+
+    // Если кэш свежий, возвращаем его
+    if (purchasesCache && (now - purchasesCacheTime) < CACHE_DURATION) {
+      return purchasesCache
+    }
+
+    try {
+      const response = await fetch('/api/purchases')
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          console.warn('Пользователь не авторизован для получения данных закупок')
+          return { purchases: [] }
+        }
+        console.warn('Не удалось получить данные закупок')
+        return { purchases: [] }
+      }
+
+      const data = await response.json()
+      setPurchasesCache(data)
+      setPurchasesCacheTime(now)
+      return data
+    } catch (error) {
+      console.error('Ошибка получения данных закупок:', error)
+      return { purchases: [] }
+    }
+  }, [purchasesCache, purchasesCacheTime])
+
   // Расчет расходов на товар (курьер + расходы из базы)
-  const calculateExpenses = async (productName: string): Promise<number> => {
+  const calculateExpenses = async (productName: string): Promise<{ total: number, breakdown?: any }> => {
+    try {
+      // Получаем детализированные расходы из API
+      const dateRange = range.start && range.end
+        ? `from=${range.start.toISOString().split('T')[0]}&to=${range.end.toISOString().split('T')[0]}`
+        : `from=${new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0]}&to=${new Date().toISOString().split('T')[0]}`
+
+      const response = await fetch(`/api/analytics/products?${dateRange}`)
+      if (response.ok) {
+        const data = await response.json()
+        const productData = data.data?.products?.find((p: any) => p.productName === productName)
+        if (productData?.expenses && typeof productData.expenses === 'object') {
+          return {
+            total: productData.expenses.total,
+            breakdown: productData.expenses
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Не удалось получить детализированные расходы:', error)
+    }
+
+    // Fallback к фиксированным значениям
     const courierCost = 350 // Фиксированная стоимость отправки курьером в рублях
-
-    // TODO: Здесь будет запрос к базе расходов для получения дополнительных расходов
-    // const additionalExpenses = await getExpensesFromDatabase(productName)
-
-    // Пока используем среднее значение расходов на рекламу и расходники
     const averageAdditionalExpenses = 50 + Math.random() * 100 // 50-150₽ на товар
+    const total = courierCost + averageAdditionalExpenses
 
-    return courierCost + averageAdditionalExpenses
+    return {
+      total,
+      breakdown: {
+        delivery: courierCost,
+        logistics: averageAdditionalExpenses * 0.3,
+        advertising: averageAdditionalExpenses * 0.5,
+        other: averageAdditionalExpenses * 0.2,
+        total
+      }
+    }
   }
 
   // Фиксированные цены товаров в лирах из базы данных
@@ -1713,14 +1880,20 @@ const PremiumPurchaseAnalytics = () => {
 
   // Filtered and sorted data with active filter logic
   const filteredData = useMemo(() => {
+    console.log(`🔍 Debug filteredData: showHiddenProducts = ${showHiddenProducts}, products.length = ${products.length}`)
+
+    const hiddenProductsCount = products.filter(p => p.isHidden).length
+    const visibleProductsCount = products.filter(p => !p.isHidden).length
+    console.log(`🔍 Debug: hiddenProductsCount = ${hiddenProductsCount}, visibleProductsCount = ${visibleProductsCount}`)
+
     const filtered = products.filter(product => {
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            product.category.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesCategory = selectedCategory === 'Все категории' || product.category === selectedCategory
       const needsPurchase = showOnlyNeedsPurchase ? product.toPurchase > 0 : true
 
-      // Hidden products filter - показывать скрытые только если включен переключатель
-      const isVisibleOrShowHidden = showHiddenProducts || !product.isHidden
+      // Hidden products filter - показывать ТОЛЬКО скрытые при включенном переключателе
+      const isVisibleOrShowHidden = showHiddenProducts ? product.isHidden : !product.isHidden
 
       // Analytics filter logic (новая продвинутая фильтрация)
       let matchesAnalyticsFilter = true
@@ -1760,8 +1933,21 @@ const PremiumPurchaseAnalytics = () => {
         }
       }
 
-      return matchesSearch && matchesCategory && needsPurchase && matchesActiveFilter && matchesAnalyticsFilter && isVisibleOrShowHidden
+      const result = matchesSearch && matchesCategory && needsPurchase && matchesActiveFilter && matchesAnalyticsFilter && isVisibleOrShowHidden
+
+      // Debug логирование для скрытых товаров
+      if (product.isHidden && showHiddenProducts) {
+        console.log(`🔍 Debug скрытый товар "${product.name}": isVisibleOrShowHidden = ${isVisibleOrShowHidden}, result = ${result}`)
+      }
+
+      return result
     })
+
+    console.log(`🔍 Debug filteredData result: filtered.length = ${filtered.length}`)
+
+    if (showHiddenProducts && filtered.length === 0) {
+      console.warn('⚠️ Включен showHiddenProducts, но filteredData пустой!')
+    }
 
     return customSort(filtered)
   }, [products, searchQuery, selectedCategory, showOnlyNeedsPurchase, activeFilter, analyticsFilter, deliverySettings.deliveryLeadTime, showHiddenProducts])
@@ -1838,7 +2024,7 @@ const PremiumPurchaseAnalytics = () => {
       )
 
       if (selectedProducts.length === 0) {
-        alert('Выберите товары для закупки')
+        showNotification('warning', 'Товары не выбраны', 'Выберите товары для создания закупки')
         return
       }
 
@@ -1855,7 +2041,7 @@ const PremiumPurchaseAnalytics = () => {
       setPurchaseModalOpen(true)
     } catch (error) {
       console.error('Ошибка при открытии модального окна закупки:', error)
-      alert('❌ Ошибка при открытии модального окна закупки')
+      showNotification('error', 'Ошибка', 'Не удалось открыть модальное окно закупки')
     }
   }, [filteredData, selectedRows, deliverySettings.deliveryLeadTime])
 
@@ -1867,6 +2053,7 @@ const PremiumPurchaseAnalytics = () => {
         const quantity = product.toPurchase > 0 ? product.toPurchase : Math.max(1, product.minStock - product.stock)
         return {
           productId: product.id,
+          productName: product.name, // Добавляем название товара
           quantity: quantity,
           costTry: product.costTry,
           costRub: product.costRub
@@ -1877,7 +2064,7 @@ const PremiumPurchaseAnalytics = () => {
 
       // 1. Создать запись в истории закупок
       console.log('📝 Создание закупки в истории...')
-      const purchaseResponse = await fetch('http://localhost:3011/api/purchases', {
+      const purchaseResponse = await fetch('/api/purchases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1898,7 +2085,7 @@ const PremiumPurchaseAnalytics = () => {
 
       // 2. Добавить расход в систему расходов (опционально)
       try {
-        await fetch('http://localhost:3011/api/expenses', {
+        await fetch('/api/expenses', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1926,13 +2113,32 @@ const PremiumPurchaseAnalytics = () => {
         return updated || p
       }))
 
-      // Show success message
+      // Show success notification
       const urgentProducts = selectedProductsForPurchase.filter(p => p.urgencyLevel === 'critical')
-      const message = urgentProducts.length > 0
-        ? `✅ Создана срочная закупка "${purchaseForm.supplier}" на ${selectedProductsForPurchase.length} товар${selectedProductsForPurchase.length === 1 ? '' : selectedProductsForPurchase.length < 5 ? 'а' : 'ов'} (${totalAmount.toLocaleString('ru-RU')} ₽)`
-        : `✅ Создана закупка "${purchaseForm.supplier}" на ${selectedProductsForPurchase.length} товар${selectedProductsForPurchase.length === 1 ? '' : selectedProductsForPurchase.length < 5 ? 'а' : 'ов'} (${totalAmount.toLocaleString('ru-RU')} ₽)`
+      const title = urgentProducts.length > 0 ? '🔥 Срочная закупка создана' : '📦 Закупка создана'
+      const message = `Поставщик: ${purchaseForm.supplier}\nТоваров: ${selectedProductsForPurchase.length}\nСумма: ${totalAmount.toLocaleString('ru-RU')} ₽`
 
-      alert(message)
+      setNotification({
+        open: true,
+        type: 'success',
+        title,
+        message
+      })
+
+      // Send Telegram notification
+      try {
+        await fetch('/api/telegram', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: urgentProducts.length > 0 ? 'urgent_purchase' : 'purchase',
+            message: `${title}\n\n${message}\n\nТовары:\n${selectedProductsForPurchase.map(p => `• ${p.name} — ${p.toPurchase > 0 ? p.toPurchase : Math.max(1, p.minStock - p.stock)} шт.`).join('\n')}`
+          })
+        })
+        console.log('📱 Telegram уведомление отправлено')
+      } catch (telegramError) {
+        console.warn('⚠️ Не удалось отправить Telegram уведомление:', telegramError)
+      }
 
       // Reset states
       setPurchaseModalOpen(false)
@@ -1946,7 +2152,7 @@ const PremiumPurchaseAnalytics = () => {
       })
     } catch (error) {
       console.error('Ошибка при создании закупки:', error)
-      alert('❌ Ошибка при создании закупки')
+      showNotification('error', 'Ошибка создания закупки', 'Не удалось создать закупку. Попробуйте еще раз.')
     }
   }, [selectedProductsForPurchase, purchaseForm])
 
@@ -1963,7 +2169,7 @@ const PremiumPurchaseAnalytics = () => {
 
       const amount = Number(receivedAmount)
       if (amount <= 0 || amount > product.inTransit) {
-        alert('Неверное количество товара')
+        showNotification('warning', 'Неверное количество', 'Введите корректное количество товара')
         return
       }
 
@@ -1984,7 +2190,7 @@ const PremiumPurchaseAnalytics = () => {
 
     } catch (error) {
       console.error('Ошибка при оприходовании товара:', error)
-      alert('Ошибка при оприходовании товара')
+      showNotification('error', 'Ошибка оприходования', 'Не удалось оприходовать товар')
     }
   }, [products])
 
@@ -1996,7 +2202,7 @@ const PremiumPurchaseAnalytics = () => {
       )
 
       if (receivableProducts.length === 0) {
-        alert('Выберите товары, которые находятся в пути для оприходования')
+        showNotification('warning', 'Товары не выбраны', 'Выберите товары, которые находятся в пути для оприходования')
         return
       }
 
@@ -2004,7 +2210,7 @@ const PremiumPurchaseAnalytics = () => {
       setReceiveModalOpen(true)
     } catch (error) {
       console.error('Ошибка при открытии модального окна оприходования:', error)
-      alert('❌ Ошибка при открытии модального окна оприходования')
+      showNotification('error', 'Ошибка', 'Не удалось открыть модальное окно оприходования')
     }
   }, [filteredData, selectedRows])
 
@@ -2028,7 +2234,7 @@ const PremiumPurchaseAnalytics = () => {
 
       const totalReceived = Object.values(receiveForm.actualQuantities).reduce((sum: number, qty: any) => sum + (qty || 0), 0)
 
-      alert(`✅ Успешно оприходовано ${selectedProductsForReceive.length} товар${selectedProductsForReceive.length === 1 ? '' : selectedProductsForReceive.length < 5 ? 'а' : 'ов'} (${totalReceived} шт)`)
+      showNotification('success', 'Оприходование завершено', `Успешно оприходовано ${selectedProductsForReceive.length} товар${selectedProductsForReceive.length === 1 ? '' : selectedProductsForReceive.length < 5 ? 'а' : 'ов'} (${totalReceived} шт)`)
 
       // Reset states
       setReceiveModalOpen(false)
@@ -2042,7 +2248,7 @@ const PremiumPurchaseAnalytics = () => {
       })
     } catch (error) {
       console.error('Ошибка при оприходовании товаров:', error)
-      alert('❌ Ошибка при оприходовании товаров')
+      showNotification('error', 'Ошибка оприходования', 'Не удалось оприходовать товары')
     }
   }, [selectedProductsForReceive, receiveForm.actualQuantities])
 
@@ -2201,7 +2407,7 @@ const PremiumPurchaseAnalytics = () => {
     try {
       console.log(`👁️ Скрытие товара: ${productName}`)
 
-      const response = await fetch(`http://localhost:3011/api/products/hide`, {
+      const response = await fetch(`/api/products/hide`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -2233,7 +2439,7 @@ const PremiumPurchaseAnalytics = () => {
     try {
       console.log(`👁️ Показ товара: ${productName}`)
 
-      const response = await fetch(`http://localhost:3011/api/products/hide`, {
+      const response = await fetch(`/api/products/hide`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -2280,7 +2486,7 @@ const PremiumPurchaseAnalytics = () => {
 
       // Скрываем каждый товар
       const hidePromises = selectedProducts.map(async (product) => {
-        const response = await fetch(`http://localhost:3011/api/products/hide`, {
+        const response = await fetch(`/api/products/hide`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -2310,9 +2516,76 @@ const PremiumPurchaseAnalytics = () => {
       // Очищаем выбор
       setSelectedRows([])
 
+      showNotification('success', 'Товары скрыты', `Скрыто ${selectedProducts.length} товар${selectedProducts.length === 1 ? '' : selectedProducts.length < 5 ? 'а' : 'ов'}`)
+
     } catch (error) {
       console.error('❌ Ошибка массового скрытия товаров:', error)
-      alert('❌ Ошибка при скрытии товаров')
+      showNotification('error', 'Ошибка скрытия', 'Не удалось скрыть товары')
+    }
+  }
+
+  // Функция массового показа товаров
+  const handleBulkShowProducts = async () => {
+    try {
+      console.log(`👁️ Массовый показ товаров: ${selectedRows.length} товаров`)
+
+      // Получаем выбранные скрытые товары
+      const selectedHiddenProducts = filteredData.filter(p =>
+        selectedRows.includes(p.id) && p.isHidden
+      )
+
+      if (selectedHiddenProducts.length === 0) {
+        showNotification('warning', 'Нет скрытых товаров', 'Выберите скрытые товары для показа')
+        return
+      }
+
+      // Подтверждение действия
+      const productNames = selectedHiddenProducts.map(p => p.name).join(', ')
+      const confirmText = selectedHiddenProducts.length === 1
+        ? `Показать товар "${productNames}"?`
+        : `Показать ${selectedHiddenProducts.length} товар${selectedHiddenProducts.length === 1 ? '' : selectedHiddenProducts.length < 5 ? 'а' : 'ов'}?\n\n${productNames.length > 100 ? productNames.substring(0, 100) + '...' : productNames}`
+
+      if (!confirm(confirmText)) {
+        return
+      }
+
+      // Показываем каждый товар
+      const showPromises = selectedHiddenProducts.map(async (product) => {
+        const response = await fetch(`/api/products/hide`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ productName: product.name, isHidden: false })
+        })
+
+        if (!response.ok) {
+          throw new Error(`Ошибка показа товара ${product.name}`)
+        }
+
+        return await response.json()
+      })
+
+      // Ждем выполнения всех запросов
+      await Promise.all(showPromises)
+
+      console.log('✅ Товары показаны массово:', selectedHiddenProducts.length)
+
+      // Обновляем локальное состояние
+      setProducts(prev => prev.map(product =>
+        selectedRows.includes(product.id) && product.isHidden
+          ? { ...product, isHidden: false }
+          : product
+      ))
+
+      // Очищаем выбор
+      setSelectedRows([])
+
+      showNotification('success', 'Товары показаны', `Показано ${selectedHiddenProducts.length} товар${selectedHiddenProducts.length === 1 ? '' : selectedHiddenProducts.length < 5 ? 'а' : 'ов'}`)
+
+    } catch (error) {
+      console.error('❌ Ошибка массового показа товаров:', error)
+      showNotification('error', 'Ошибка показа', 'Не удалось показать товары')
     }
   }
 
@@ -2351,7 +2624,7 @@ const PremiumPurchaseAnalytics = () => {
       >
         {/* Интерактивные метрики */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={4}>
             <Paper
               sx={{
                 p: 3,
@@ -2383,7 +2656,7 @@ const PremiumPurchaseAnalytics = () => {
               </Typography>
             </Paper>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={4}>
             <Paper
               sx={{
                 p: 3,
@@ -2415,39 +2688,7 @@ const PremiumPurchaseAnalytics = () => {
               </Typography>
             </Paper>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper
-              sx={{
-                p: 3,
-                textAlign: 'center',
-                border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                bgcolor: activeFilter === 'needsPurchase' ? alpha(theme.palette.success.main, 0.08) : 'transparent',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: theme.palette.mode === 'dark'
-                    ? '0 8px 24px rgba(76,175,80,0.3)'
-                    : '0 8px 24px rgba(76,175,80,0.15)',
-                  bgcolor: alpha(theme.palette.success.main, 0.05)
-                }
-              }}
-              onClick={() => {
-                setActiveFilter(activeFilter === 'needsPurchase' ? null : 'needsPurchase')
-                setShowOnlyNeedsPurchase(activeFilter !== 'needsPurchase')
-                setSelectedCategory('Все категории')
-              }}
-            >
-              <Typography variant="h3" sx={{ fontWeight: 700, mb: 1, color: theme.palette.mode === 'dark' ? '#4ADE80' : theme.palette.success.main }}>
-                {stats.needsPurchase}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">Нужна закупка</Typography>
-              <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: theme.palette.mode === 'dark' ? '#4ADE80' : theme.palette.success.main, opacity: 0.7 }}>
-                Готовы к заказу
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={4}>
             <Paper
               sx={{
                 p: 3,
@@ -2508,27 +2749,6 @@ const PremiumPurchaseAnalytics = () => {
             <Paper sx={{
               p: 2.5,
               textAlign: 'center',
-              border: `1px solid ${alpha('#4caf50', 0.2)}`,
-              '&:hover': {
-                transform: 'translateY(-1px)',
-                boxShadow: theme.palette.mode === 'dark' ? '0 4px 12px rgba(76,175,80,0.3)' : '0 4px 12px rgba(76,175,80,0.15)'
-              },
-              transition: 'all 0.2s ease'
-            }}>
-              <Typography variant="h4" sx={{
-                fontWeight: 700,
-                mb: 0.5,
-                color: theme.palette.mode === 'dark' ? '#4ADE80' : '#4caf50'
-              }}>
-                {formatCurrency(stats.potentialRevenue)}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">Потенциальная выручка</Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper sx={{
-              p: 2.5,
-              textAlign: 'center',
               border: `1px solid ${alpha('#ff9800', 0.2)}`,
               '&:hover': {
                 transform: 'translateY(-1px)',
@@ -2570,57 +2790,7 @@ const PremiumPurchaseAnalytics = () => {
         </Grid>
       </motion.div>
 
-      {/* Currency Chart and Delivery Lead Time */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.15 }}
-      >
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} md={8}>
-            <CurrencyChart
-              data={mockCurrencyTrend}
-              change={trendChange}
-            />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <DeliveryLeadTimeCard
-              leadTime={deliverySettings.deliveryLeadTime}
-            />
-          </Grid>
-        </Grid>
 
-                {/* Информация о выбранном периоде для расчета цен */}
-        <Box sx={{
-          p: 2,
-          mb: 3,
-          borderRadius: 2,
-          backgroundColor: alpha(theme.palette.primary.main, 0.05),
-          border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2
-        }}>
-          <Box sx={{
-            p: 1,
-            borderRadius: 1,
-            backgroundColor: alpha(theme.palette.primary.main, 0.1),
-          }}>
-            <Timeline sx={{ fontSize: 20, color: theme.palette.primary.main }} />
-          </Box>
-          <Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.primary.main }}>
-              Розничные цены рассчитаны за период:
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {range.start && range.end
-                ? `${range.start.toLocaleDateString('ru-RU')} — ${range.end.toLocaleDateString('ru-RU')} (${Math.ceil((range.end.getTime() - range.start.getTime()) / (1000 * 60 * 60 * 24))} дней)`
-                : "Последние 30 дней (период по умолчанию)"
-              }
-            </Typography>
-          </Box>
-        </Box>
-      </motion.div>
 
       {/* Simplified Filters */}
       <motion.div
@@ -2865,325 +3035,268 @@ const PremiumPurchaseAnalytics = () => {
           transition={{ duration: 0.3, delay: 0.3 }}
         >
           <Paper sx={{
-            border: 'none',
+            borderRadius: '16px',
+            overflow: 'hidden',
+            bgcolor: theme.palette.mode === 'dark' ? '#1a1a1a' : '#ffffff',
+            border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
             boxShadow: theme.palette.mode === 'dark'
-              ? '0 2px 8px rgba(0,0,0,0.12)'
-              : '0 1px 3px rgba(0,0,0,0.06)',
-            borderRadius: 3
+              ? '0 8px 32px rgba(0,0,0,0.3)'
+              : '0 8px 32px rgba(0,0,0,0.08)'
           }}>
-            <TableContainer sx={{ maxHeight: 'calc(100vh - 400px)' }}>
-              <Table stickyHeader>
-                <TableHead>
-                  {/* Группировка колонок */}
-                  <TableRow sx={{
-                    bgcolor: theme.palette.background.paper,
-                    boxShadow: '2px 0 12px rgba(0,0,0,0.06)',
-                    zIndex: 100
-                  }}>
-                    <TableCell
-                      padding="checkbox"
-                      sx={{
-                        borderBottom: `1px solid ${alpha(theme.palette.divider, 0.05)}`,
-                        bgcolor: 'inherit',
-                        py: theme.spacing(3)
-                      }}
-                    >
-                      <Checkbox
-                        checked={selectedRows.length === filteredData.length && filteredData.length > 0}
-                        indeterminate={selectedRows.length > 0 && selectedRows.length < filteredData.length}
-                        onChange={handleSelectAll}
-                        sx={{ borderRadius: 1.5 }}
+            {/* Desktop Table */}
+            <Box sx={{
+              display: { xs: 'none', lg: 'block' }
+            }}>
+              <TableContainer>
+                <Table sx={{
+                  minWidth: 1200,
+                  '& .MuiTableCell-root': {
+                    borderColor: alpha(theme.palette.divider, 0.06),
+                    fontSize: '0.875rem',
+                    fontFamily: 'Inter, -apple-system, sans-serif',
+                  }
+                }}>
+                  <TableHead>
+                    {/* Group Headers */}
+                    <TableRow sx={{
+                      bgcolor: alpha(theme.palette.background.paper, 0.8),
+                      borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`
+                    }}>
+                      <TableCell
+                        padding="checkbox"
+                        sx={{
+                          bgcolor: 'inherit',
+                          borderBottom: 'none',
+                          py: theme.spacing(1.5)
+                        }}
                       />
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        borderBottom: `1px solid ${alpha(theme.palette.divider, 0.05)}`,
-                        bgcolor: 'inherit',
-                        fontFamily: 'Inter, -apple-system, sans-serif',
-                        fontWeight: 600,
-                        fontSize: '0.75rem',
-                        letterSpacing: '0.05em',
-                        textTransform: 'uppercase',
-                        color: 'text.secondary',
-                        py: theme.spacing(3)
-                      }}
-                    >
-                      Товар
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      colSpan={4}
-                      sx={{
-                        borderBottom: `1px solid ${alpha(theme.palette.divider, 0.05)}`,
-                        borderRight: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
-                        bgcolor: 'inherit',
-                        fontFamily: 'Inter, -apple-system, sans-serif',
-                        fontWeight: 600,
-                        fontSize: '0.75rem',
-                        letterSpacing: '0.05em',
-                        textTransform: 'uppercase',
-                        color: 'text.secondary',
-                        py: theme.spacing(3)
-                      }}
-                    >
-                      Остатки
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      colSpan={5}
-                      sx={{
-                        borderBottom: `1px solid ${alpha(theme.palette.divider, 0.05)}`,
-                        borderRight: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
-                        bgcolor: 'inherit',
-                        fontFamily: 'Inter, -apple-system, sans-serif',
-                        fontWeight: 600,
-                        fontSize: '0.75rem',
-                        letterSpacing: '0.05em',
-                        textTransform: 'uppercase',
-                        color: 'text.secondary',
-                        py: theme.spacing(3)
-                      }}
-                    >
-                      Финансы
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      colSpan={2}
-                      sx={{
-                        borderBottom: `1px solid ${alpha(theme.palette.divider, 0.05)}`,
-                        bgcolor: 'inherit',
-                        fontFamily: 'Inter, -apple-system, sans-serif',
-                        fontWeight: 600,
-                        fontSize: '0.75rem',
-                        letterSpacing: '0.05em',
-                        textTransform: 'uppercase',
-                        color: 'text.secondary',
-                        py: theme.spacing(3)
-                      }}
-                    >
-                      Закупка
-                    </TableCell>
-                  </TableRow>
-                  {/* Основные заголовки */}
-                  <TableRow sx={{
-                    bgcolor: theme.palette.background.paper,
-                    borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`
-                  }}>
-                    <TableCell
-                      padding="checkbox"
-                      sx={{
-                        bgcolor: 'inherit',
-                        py: '10px', // py-2.5
-                        verticalAlign: 'middle'
-                      }}
-                    />
-                    <TableCell sx={{
-                      bgcolor: 'inherit',
-                      fontFamily: 'Inter, -apple-system, sans-serif',
-                      fontWeight: 500,
-                      fontSize: '0.875rem', // text-sm
-                      color: theme.palette.mode === 'dark' ? '#f9fafb' : '#111827',
-                      py: '10px', // py-2.5
-                      verticalAlign: 'middle'
-                    }}>Название</TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{
-                        bgcolor: 'inherit',
-                        fontFamily: 'Inter, -apple-system, sans-serif',
+                      <TableCell
+                        sx={{
+                          bgcolor: 'inherit',
+                          borderBottom: 'none',
+                          borderRight: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
+                          fontFamily: 'Inter, -apple-system, sans-serif',
+                          fontWeight: 600,
+                          fontSize: '0.75rem',
+                          letterSpacing: '0.05em',
+                          textTransform: 'uppercase',
+                          color: 'text.secondary',
+                          py: theme.spacing(1.5)
+                        }}
+                      >
+                        Товар
+                      </TableCell>
+                      {/* Блок Запасы */}
+                      <TableCell
+                        align="center"
+                        colSpan={3}
+                        sx={{
+                          borderBottom: 'none',
+                          borderRight: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
+                          bgcolor: 'inherit',
+                          fontFamily: 'Inter, -apple-system, sans-serif',
+                          fontWeight: 600,
+                          fontSize: '0.75rem',
+                          letterSpacing: '0.05em',
+                          textTransform: 'uppercase',
+                          color: 'text.secondary',
+                          py: theme.spacing(1.5)
+                        }}
+                      >
+                        📦 Запасы
+                      </TableCell>
+                      {/* Блок Продажи */}
+                      <TableCell
+                        align="center"
+                        colSpan={3}
+                        sx={{
+                          borderBottom: 'none',
+                          borderRight: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
+                          bgcolor: 'inherit',
+                          fontFamily: 'Inter, -apple-system, sans-serif',
+                          fontWeight: 600,
+                          fontSize: '0.75rem',
+                          letterSpacing: '0.05em',
+                          textTransform: 'uppercase',
+                          color: 'text.secondary',
+                          py: theme.spacing(1.5)
+                        }}
+                      >
+                        📈 Продажи
+                      </TableCell>
+                      {/* Блок Финансы */}
+                      <TableCell
+                        align="center"
+                        colSpan={5}
+                        sx={{
+                          borderBottom: 'none',
+                          borderRight: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
+                          bgcolor: 'inherit',
+                          fontFamily: 'Inter, -apple-system, sans-serif',
+                          fontWeight: 600,
+                          fontSize: '0.75rem',
+                          letterSpacing: '0.05em',
+                          textTransform: 'uppercase',
+                          color: 'text.secondary',
+                          py: theme.spacing(1.5)
+                        }}
+                      >
+                        💰 Финансы
+                      </TableCell>
+                      {/* Блок Закупка */}
+                      <TableCell
+                        align="center"
+                        colSpan={1}
+                        sx={{
+                          borderBottom: 'none',
+                          bgcolor: 'inherit',
+                          fontFamily: 'Inter, -apple-system, sans-serif',
+                          fontWeight: 600,
+                          fontSize: '0.75rem',
+                          letterSpacing: '0.05em',
+                          textTransform: 'uppercase',
+                          color: 'text.secondary',
+                          py: theme.spacing(1.5)
+                        }}
+                      >
+                        🛒 Закупка
+                      </TableCell>
+                    </TableRow>
+                    {/* Column Headers */}
+                    <TableRow sx={{
+                      bgcolor: theme.palette.background.paper,
+                      borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                      '& .MuiTableCell-root': {
+                        py: '10px',
                         fontWeight: 500,
-                        fontSize: '0.875rem', // text-sm
-                        color: theme.palette.mode === 'dark' ? '#f9fafb' : '#111827',
-                        py: '10px', // py-2.5
-                        verticalAlign: 'middle'
-                      }}
-                    >
-                      Остаток
-                    </TableCell>
-                    <TableCell align="center" sx={{
-                      bgcolor: 'inherit',
-                      fontFamily: 'Inter, -apple-system, sans-serif',
-                      fontWeight: 500,
-                      fontSize: '0.875rem', // text-sm
-                      color: theme.palette.mode === 'dark' ? '#f9fafb' : '#111827',
-                      py: '10px', // py-2.5
-                      verticalAlign: 'middle'
-                    }}>Дней до 0</TableCell>
-                    <TableCell align="center" sx={{
-                      bgcolor: 'inherit',
-                      fontFamily: 'Inter, -apple-system, sans-serif',
-                      fontWeight: 500,
-                      fontSize: '0.875rem', // text-sm
-                      color: theme.palette.mode === 'dark' ? '#f9fafb' : '#111827',
-                      py: '10px', // py-2.5
-                      verticalAlign: 'middle'
-                    }}>Оборачиваемость</TableCell>
-                    <TableCell align="center" sx={{
-                      bgcolor: 'inherit',
-                      fontFamily: 'Inter, -apple-system, sans-serif',
-                      fontWeight: 500,
-                      fontSize: '0.875rem', // text-sm
-                      color: theme.palette.mode === 'dark' ? '#f9fafb' : '#111827',
-                      py: '10px', // py-2.5
-                      verticalAlign: 'middle'
-                    }}>В Пути</TableCell>
-                    <TableCell
-                      align="right"
-                      sx={{
-                        bgcolor: 'inherit',
-                        fontFamily: 'Inter, -apple-system, sans-serif',
-                        fontWeight: 500,
-                        fontSize: '0.875rem', // text-sm
-                        color: theme.palette.mode === 'dark' ? '#f9fafb' : '#111827',
-                        py: '10px', // py-2.5
-                        verticalAlign: 'middle'
-                      }}
-                    >
-                      <Box component="span" sx={{
-                        fontWeight: 500,
-                        color: theme.palette.mode === 'dark' ? '#f9fafb' : '#111827'
-                      }}>
-                        Себест.{' '}
-                        <Box component="span" sx={{
-                          fontSize: '0.875rem',
-                          color: theme.palette.mode === 'dark' ? '#9ca3af' : '#6B7280'
-                        }}>₺</Box>
-                      </Box>
-                    </TableCell>
-                    <TableCell align="right" sx={{
-                      bgcolor: 'inherit',
-                      fontFamily: 'Inter, -apple-system, sans-serif',
-                      fontWeight: 500,
-                      fontSize: '0.875rem', // text-sm
-                      color: theme.palette.mode === 'dark' ? '#f9fafb' : '#111827',
-                      py: '10px', // py-2.5
-                      verticalAlign: 'middle'
-                    }}>Логистика</TableCell>
-                    <TableCell align="right" sx={{
-                      bgcolor: 'inherit',
-                      fontFamily: 'Inter, -apple-system, sans-serif',
-                      fontWeight: 500,
-                      fontSize: '0.875rem', // text-sm
-                      color: theme.palette.mode === 'dark' ? '#f9fafb' : '#111827',
-                      py: '10px', // py-2.5
-                      verticalAlign: 'middle'
+                        fontSize: '0.75rem',
+                        color: 'text.secondary',
+                        letterSpacing: 'normal'
+                      }
                     }}>
-                      <Box component="span" sx={{
-                        fontWeight: 500,
-                        color: theme.palette.mode === 'dark' ? '#f9fafb' : '#111827'
-                      }}>
-                        Итого себест.{' '}
-                        <Box component="span" sx={{
-                          fontSize: '0.875rem',
-                          color: theme.palette.mode === 'dark' ? '#9ca3af' : '#6B7280'
-                        }}>₽</Box>
-                      </Box>
-                    </TableCell>
-                    <TableCell align="right" sx={{
-                      bgcolor: 'inherit',
-                      fontFamily: 'Inter, -apple-system, sans-serif',
-                      fontWeight: 500,
-                      fontSize: '0.875rem', // text-sm
-                      color: theme.palette.mode === 'dark' ? '#f9fafb' : '#111827',
-                      py: '10px', // py-2.5
-                      verticalAlign: 'middle'
-                    }}>
-                      <Box component="span" sx={{
-                        fontWeight: 500,
-                        color: theme.palette.mode === 'dark' ? '#f9fafb' : '#111827'
-                      }}>
-                        Розн. цена{' '}
-                        <Box component="span" sx={{
-                          fontSize: '0.875rem',
-                          color: theme.palette.mode === 'dark' ? '#9ca3af' : '#6B7280'
-                        }}>₽</Box>
-                      </Box>
-                    </TableCell>
-                    <TableCell align="right" sx={{
-                      bgcolor: 'inherit',
-                      fontFamily: 'Inter, -apple-system, sans-serif',
-                      fontWeight: 500,
-                      fontSize: '0.875rem', // text-sm
-                      color: theme.palette.mode === 'dark' ? '#f9fafb' : '#111827',
-                      py: '10px', // py-2.5
-                      verticalAlign: 'middle'
-                    }}>Маржа %</TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{
+                      <TableCell
+                        padding="checkbox"
+                        sx={{
+                          bgcolor: 'inherit',
+                          py: '10px'
+                        }}
+                      />
+                      <TableCell sx={{
                         bgcolor: 'inherit',
-                        fontFamily: 'Inter, -apple-system, sans-serif',
-                        fontWeight: 500,
-                        fontSize: '0.875rem', // text-sm
-                        color: theme.palette.mode === 'dark' ? '#f9fafb' : '#111827',
-                        py: '10px', // py-2.5
-                        verticalAlign: 'middle'
-                      }}
-                    >
-                      <Box component="span" sx={{
-                        fontWeight: 500,
-                        color: theme.palette.mode === 'dark' ? '#f9fafb' : '#111827'
+                        minWidth: 200,
+                        borderRight: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
+                        fontWeight: 600,
+                        color: 'text.primary'
                       }}>
-                        Рекомендовано{' '}
-                        <Box component="span" sx={{
-                          fontSize: '0.875rem',
-                          color: theme.palette.mode === 'dark' ? '#9ca3af' : '#6B7280'
-                        }}>шт</Box>
-                      </Box>
-                    </TableCell>
+                        Название
+                      </TableCell>
 
-                  </TableRow>
-                </TableHead>
-                                <TableBody>
-                  {filteredData.map((product) => (
-                    <TableRow
-                      key={product.id}
-                      sx={{
-                        borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`, // border-b
-                        transition: 'background-color 0.15s ease-in-out',
-                        // Визуальное выделение скрытых товаров
-                        opacity: product.isHidden ? 0.7 : 1,
-                        backgroundColor: product.isHidden
-                          ? alpha(theme.palette.grey[500], 0.05)
-                          : 'transparent',
-                        '&:hover': {
-                          bgcolor: product.isHidden
-                            ? alpha(theme.palette.grey[500], 0.1)
-                            : alpha(theme.palette.primary.main, 0.02)
-                        }
-                      }}
-                    >
-                        <TableCell
-                          padding="checkbox"
-                          sx={{
-                            py: '10px', // py-2.5
-                            verticalAlign: 'middle'
-                          }}
-                        >
+                      {/* Блок Запасы */}
+                      <TableCell align="center" sx={{ bgcolor: 'inherit', minWidth: 90 }}>
+                        Остаток
+                      </TableCell>
+                      <TableCell align="center" sx={{ bgcolor: 'inherit', minWidth: 90 }}>
+                        Дней до 0
+                      </TableCell>
+                      <TableCell align="center" sx={{
+                        bgcolor: 'inherit',
+                        minWidth: 80,
+                        borderRight: `1px solid ${alpha(theme.palette.divider, 0.15)}`
+                      }}>
+                        В пути
+                      </TableCell>
+
+                      {/* Блок Продажи */}
+                      <TableCell align="center" sx={{ bgcolor: 'inherit', minWidth: 120 }}>
+                        Ср. потребление
+                      </TableCell>
+                      <TableCell align="center" sx={{ bgcolor: 'inherit', minWidth: 130 }}>
+                        Продаж за период
+                      </TableCell>
+                      <TableCell align="center" sx={{
+                        bgcolor: 'inherit',
+                        minWidth: 120,
+                        borderRight: `1px solid ${alpha(theme.palette.divider, 0.15)}`
+                      }}>
+                        Оборачиваемость
+                      </TableCell>
+
+                      {/* Блок Финансы */}
+                      <TableCell align="right" sx={{ bgcolor: 'inherit', minWidth: 100 }}>
+                        Себест.
+                      </TableCell>
+                      <TableCell align="right" sx={{ bgcolor: 'inherit', minWidth: 100 }}>
+                        Расходы
+                      </TableCell>
+                      <TableCell align="right" sx={{ bgcolor: 'inherit', minWidth: 120 }}>
+                        Итого себест.
+                      </TableCell>
+                      <TableCell align="right" sx={{ bgcolor: 'inherit', minWidth: 120 }}>
+                        Розн. цена
+                      </TableCell>
+                      <TableCell align="right" sx={{
+                        bgcolor: 'inherit',
+                        minWidth: 90,
+                        borderRight: `1px solid ${alpha(theme.palette.divider, 0.15)}`
+                      }}>
+                        Маржа %
+                      </TableCell>
+
+                      {/* Блок Закупка */}
+                      <TableCell align="center" sx={{ bgcolor: 'inherit', minWidth: 120 }}>
+                        Рекомендовано
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredData.map((product, index) => (
+                      <TableRow
+                        key={product.id}
+                        sx={{
+                          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.06)}`,
+                          transition: 'all 0.2s ease-in-out',
+                          opacity: product.isHidden ? 0.7 : 1,
+                          backgroundColor: product.isHidden
+                            ? alpha(theme.palette.grey[500], 0.04)
+                            : 'transparent',
+                          '&:hover': {
+                            bgcolor: product.isHidden
+                              ? alpha(theme.palette.grey[500], 0.08)
+                              : alpha(theme.palette.primary.main, 0.03),
+                            transform: 'translateY(-1px)',
+                            boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.1)}`
+                          },
+                          '& .MuiTableCell-root': {
+                            py: '14px',
+                            fontSize: '0.875rem',
+                            lineHeight: 1.4
+                          }
+                        }}
+                      >
+                        <TableCell padding="checkbox">
                           <Checkbox
                             checked={selectedRows.includes(product.id)}
                             onChange={() => handleSelectRow(product.id)}
-                            sx={{ borderRadius: 1.5 }}
+                            sx={{
+                              borderRadius: 2,
+                              '&.Mui-checked': {
+                                color: theme.palette.primary.main
+                              }
+                            }}
                           />
                         </TableCell>
-                        <TableCell
-                          sx={{
-                            py: '10px', // py-2.5
-                            verticalAlign: 'middle'
-                          }}
-                        >
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}> {/* flex gap-2 items-center */}
+                        <TableCell sx={{ borderRight: `1px solid ${alpha(theme.palette.divider, 0.15)}` }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                             {getUrgencyIcon(product.urgencyLevel)}
                             <Typography
                               variant="body2"
                               sx={{
                                 fontFamily: 'Inter, -apple-system, sans-serif',
-                                fontWeight: 500, // font-medium
-                                fontSize: '0.875rem', // text-sm
-                                lineHeight: 1.25, // leading-tight
+                                fontWeight: 600,
+                                fontSize: '0.875rem',
                                 cursor: 'pointer',
-                                color: theme.palette.mode === 'dark' ? '#f9fafb' : '#111827', // text-gray-900
-                                transition: 'color 0.15s ease-in-out',
+                                color: theme.palette.text.primary,
+                                transition: 'color 0.2s ease-in-out',
                                 '&:hover': {
                                   color: theme.palette.primary.main
                                 }
@@ -3194,124 +3307,57 @@ const PremiumPurchaseAnalytics = () => {
                             </Typography>
                           </Box>
                         </TableCell>
-                        <TableCell
-                          align="center"
-                          sx={{
-                            py: '10px', // py-2.5
-                            verticalAlign: 'middle'
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              borderRadius: '6px', // rounded-md
-                              fontSize: '0.75rem', // text-xs
-                              fontWeight: 500, // font-medium
-                              px: '8px',
-                              py: '4px',
-                              color: product.stock <= 3 ?
-                                (theme.palette.mode === 'dark' ? '#ff6b6b' : '#DC2626') :
-                                product.stock <= 7 ?
-                                (theme.palette.mode === 'dark' ? '#ffa726' : '#D97706') :
-                                (theme.palette.mode === 'dark' ? '#4ade80' : '#059669'),
-                              bgcolor: product.stock <= 3 ?
-                                (theme.palette.mode === 'dark' ? alpha('#ff6b6b', 0.15) : '#FEF2F2') :
-                                product.stock <= 7 ?
-                                (theme.palette.mode === 'dark' ? alpha('#ffa726', 0.15) : '#FEF3C7') :
-                                (theme.palette.mode === 'dark' ? alpha('#4ade80', 0.15) : '#ECFDF5'),
-                            }}
-                          >
-                            {product.stock}{' '}
-                            <Box component="span" sx={{
-                              fontSize: '0.75rem',
-                              color: theme.palette.mode === 'dark' ? '#9ca3af' : '#6B7280',
-                              ml: '2px'
-                            }}>шт</Box>
+                        <TableCell align="center">
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontWeight: 600,
+                                fontSize: '0.875rem',
+                                color: product.stock <= 3 ? '#dc2626' : product.stock <= 7 ? '#f59e0b' : 'text.primary',
+                                fontVariantNumeric: 'tabular-nums'
+                              }}
+                            >
+                              {product.stock}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                fontSize: '0.75rem',
+                                color: 'text.secondary',
+                                ml: 0.5
+                              }}
+                            >
+                              шт
+                            </Typography>
                           </Box>
                         </TableCell>
-                        <TableCell
-                          align="center"
-                          sx={{
-                            py: '10px', // py-2.5
-                            verticalAlign: 'middle'
-                          }}
-                        >
+                        <TableCell align="center">
                           <Typography
                             variant="body2"
                             sx={{
-                              fontFamily: 'Inter, -apple-system, sans-serif',
-                              fontWeight: product.daysToZero <= 7 ? 600 : 500,
-                              fontSize: '0.875rem', // text-sm
-                              lineHeight: 1.25, // leading-tight
-                              color: product.daysToZero <= 7 ?
-                                (theme.palette.mode === 'dark' ? '#ff6b6b' : '#DC2626') :
-                                (theme.palette.mode === 'dark' ? '#f9fafb' : '#111827')
+                              fontWeight: product.daysToZero <= 7 ? 700 : 500,
+                              fontSize: '0.875rem',
+                              color: product.daysToZero <= 7 ? '#dc2626' : theme.palette.text.primary
                             }}
                           >
-                            {product.daysToZero}{' '}
-                            <Box component="span" sx={{
-                              fontSize: '0.75rem',
-                              color: theme.palette.mode === 'dark' ? '#9ca3af' : '#6B7280'
-                            }}>дн</Box>
+                            {product.daysToZero} дн
                           </Typography>
                         </TableCell>
-                        <TableCell
-                          align="center"
-                          sx={{
-                            py: '10px', // py-2.5
-                            verticalAlign: 'middle'
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              borderRadius: '6px', // rounded-md
-                              fontSize: '0.75rem', // text-xs
-                              fontWeight: 500, // font-medium
-                              px: '8px',
-                              py: '4px',
-                              color: product.turnoverDays <= 30 ?
-                                (theme.palette.mode === 'dark' ? '#4ade80' : '#059669') :
-                                product.turnoverDays <= 60 ?
-                                (theme.palette.mode === 'dark' ? '#ffa726' : '#D97706') :
-                                (theme.palette.mode === 'dark' ? '#9ca3af' : '#6B7280'),
-                              bgcolor: product.turnoverDays <= 30 ?
-                                (theme.palette.mode === 'dark' ? alpha('#4ade80', 0.15) : '#ECFDF5') :
-                                product.turnoverDays <= 60 ?
-                                (theme.palette.mode === 'dark' ? alpha('#ffa726', 0.15) : '#FEF3C7') :
-                                (theme.palette.mode === 'dark' ? alpha('#9ca3af', 0.15) : '#F9FAFB'),
-                            }}
-                          >
-                            {product.turnoverDays}{' '}
-                            <Box component="span" sx={{
-                              fontSize: '0.75rem',
-                              color: theme.palette.mode === 'dark' ? '#9ca3af' : '#6B7280',
-                              ml: '2px'
-                            }}>дн</Box>
-                          </Box>
-                        </TableCell>
-                        <TableCell
-                          align="center"
-                          sx={{
-                            py: '10px', // py-2.5
-                            verticalAlign: 'middle'
-                          }}
-                        >
+                        <TableCell align="center" sx={{ borderRight: `1px solid ${alpha(theme.palette.divider, 0.15)}` }}>
                           {product.inTransit > 0 ? (
                             <Box
                               sx={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                borderRadius: '6px', // rounded-md
-                                fontSize: '0.75rem', // text-xs
-                                fontWeight: 500, // font-medium
-                                px: '8px',
-                                py: '4px',
-                                color: theme.palette.mode === 'dark' ? '#ffa726' : '#D97706', // оранжевый спокойный
-                                bgcolor: theme.palette.mode === 'dark' ? alpha('#ffa726', 0.15) : '#FEF3C7', // пастельный оранжевый
-                                gap: '4px'
+                                borderRadius: '8px',
+                                fontSize: '0.75rem',
+                                fontWeight: 500,
+                                px: 2,
+                                py: 1,
+                                color: '#d97706',
+                                bgcolor: alpha('#d97706', 0.1),
+                                gap: 1
                               }}
                             >
                               <Box
@@ -3319,24 +3365,17 @@ const PremiumPurchaseAnalytics = () => {
                                   width: 6,
                                   height: 6,
                                   borderRadius: '50%',
-                                  bgcolor: theme.palette.mode === 'dark' ? '#ffa726' : '#D97706',
+                                  bgcolor: '#d97706',
                                   animation: 'pulse 2s infinite'
                                 }}
                               />
-                              {product.inTransit}{' '}
-                              <Box component="span" sx={{
-                                fontSize: '0.75rem',
-                                color: theme.palette.mode === 'dark' ? '#9ca3af' : '#6B7280',
-                                ml: '2px'
-                              }}>шт</Box>
+                              {product.inTransit} шт
                             </Box>
                           ) : (
                             <Typography
                               variant="body2"
                               sx={{
-                                fontFamily: 'Inter, -apple-system, sans-serif',
-                                fontSize: '0.875rem', // text-sm
-                                color: theme.palette.mode === 'dark' ? '#9CA3AF' : '#9CA3AF', // text-gray-400
+                                color: '#9ca3af',
                                 fontStyle: 'italic'
                               }}
                             >
@@ -3344,153 +3383,142 @@ const PremiumPurchaseAnalytics = () => {
                             </Typography>
                           )}
                         </TableCell>
-                        <TableCell
-                          align="right"
-                          sx={{
-                            py: '10px', // py-2.5
-                            verticalAlign: 'middle'
-                          }}
-                        >
+                        <TableCell align="center">
                           <Typography
                             variant="body2"
                             sx={{
-                              fontFamily: 'Inter, -apple-system, sans-serif',
-                              fontSize: '0.875rem', // text-sm
-                              lineHeight: 1.25, // leading-tight
                               fontWeight: 500,
-                              color: theme.palette.mode === 'dark' ? '#f9fafb' : '#111827', // text-gray-900
-                              textAlign: 'right'
+                              fontSize: '0.875rem',
+                              color: product.avgPerDay >= 3 ? '#059669' :
+                                     product.avgPerDay >= 1.5 ? '#d97706' : theme.palette.text.primary
+                            }}
+                          >
+                            {product.avgPerDay.toFixed(1)} шт/день
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Box
+                            sx={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              borderRadius: '8px',
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              px: 2,
+                              py: 1,
+                              color: product.sold >= 20 ? '#059669' :
+                                     product.sold >= 10 ? '#d97706' :
+                                     product.sold > 0 ? '#3b82f6' : '#6b7280',
+                              bgcolor: product.sold >= 20 ? alpha('#059669', 0.1) :
+                                      product.sold >= 10 ? alpha('#d97706', 0.1) :
+                                      product.sold > 0 ? alpha('#3b82f6', 0.1) : alpha('#6b7280', 0.1)
+                            }}
+                          >
+                            {product.sold} шт
+                          </Box>
+                        </TableCell>
+                        <TableCell align="center" sx={{ borderRight: `1px solid ${alpha(theme.palette.divider, 0.15)}` }}>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontWeight: 500,
+                              fontSize: '0.875rem',
+                              color: product.turnoverDays <= 30 ? '#059669' :
+                                     product.turnoverDays <= 60 ? '#d97706' : '#dc2626',
+                              fontVariantNumeric: 'tabular-nums'
+                            }}
+                          >
+                            {product.turnoverDays} дн
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontWeight: 500,
+                              fontSize: '0.875rem',
+                              color: theme.palette.text.primary,
+                              fontVariantNumeric: 'tabular-nums'
                             }}
                           >
                             {formatCurrency(product.costTry, 'TRY')}
                           </Typography>
                         </TableCell>
-                        <TableCell
-                          align="right"
-                          sx={{
-                            py: '10px', // py-2.5
-                            verticalAlign: 'middle'
-                          }}
-                        >
+                        <TableCell align="right">
                           <Typography
                             variant="body2"
                             sx={{
-                              fontFamily: 'Inter, -apple-system, sans-serif',
-                              fontSize: '0.875rem', // text-sm
-                              lineHeight: 1.25, // leading-tight
                               fontWeight: 500,
-                              color: theme.palette.mode === 'dark' ? '#9ca3af' : '#6B7280', // text-gray-500
-                              textAlign: 'right'
+                              fontSize: '0.875rem',
+                              color: theme.palette.text.secondary,
+                              fontVariantNumeric: 'tabular-nums'
                             }}
                           >
-                            +{formatCurrency(product.expenses)}
+                            +{formatCurrency(typeof product.expenses === 'object' ? product.expenses.total : product.expenses)}
                           </Typography>
                         </TableCell>
-                        <TableCell
-                          align="right"
-                          sx={{
-                            py: '10px', // py-2.5
-                            verticalAlign: 'middle'
-                          }}
-                        >
+                        <TableCell align="right">
                           <Typography
                             variant="body2"
                             sx={{
-                              fontFamily: 'Inter, -apple-system, sans-serif',
                               fontWeight: 600,
-                              fontSize: '0.875rem', // text-sm
-                              lineHeight: 1.25, // leading-tight
-                              color: theme.palette.mode === 'dark' ? '#f9fafb' : '#111827', // text-gray-900
-                              textAlign: 'right'
+                              fontSize: '0.875rem',
+                              color: theme.palette.text.primary,
+                              fontVariantNumeric: 'tabular-nums'
                             }}
                           >
                             {formatCurrency(product.totalCostRub)}
                           </Typography>
                         </TableCell>
-                        <TableCell
-                          align="right"
-                          sx={{
-                            py: '10px', // py-2.5
-                            verticalAlign: 'middle'
-                          }}
-                        >
+                        <TableCell align="right">
                           <Typography
                             variant="body2"
                             sx={{
-                              fontFamily: 'Inter, -apple-system, sans-serif',
                               fontWeight: 600,
-                              fontSize: '0.875rem', // text-sm
-                              lineHeight: 1.25, // leading-tight
-                              color: theme.palette.mode === 'dark' ? '#4ade80' : '#059669', // зеленый для успеха
-                              textAlign: 'right'
+                              fontSize: '0.875rem',
+                              color: '#059669',
+                              fontVariantNumeric: 'tabular-nums'
                             }}
                           >
                             {formatCurrency(product.retailPrice)}
                           </Typography>
                         </TableCell>
-                        <TableCell
-                          align="right"
-                          sx={{
-                            py: '10px', // py-2.5
-                            verticalAlign: 'middle'
-                          }}
-                        >
+                        <TableCell align="right" sx={{ borderRight: `1px solid ${alpha(theme.palette.divider, 0.15)}` }}>
                           <Box
                             sx={{
                               display: 'inline-flex',
                               alignItems: 'center',
-                              borderRadius: '6px', // rounded-md
-                              fontSize: '0.75rem', // text-xs
-                              fontWeight: 500, // font-medium
-                              px: '8px',
-                              py: '4px',
-                              color: product.marginPercent > 40 ?
-                                (theme.palette.mode === 'dark' ? '#4ade80' : '#059669') :
-                                product.marginPercent > 20 ?
-                                (theme.palette.mode === 'dark' ? '#ffa726' : '#D97706') :
-                                (theme.palette.mode === 'dark' ? '#ff6b6b' : '#DC2626'),
-                              bgcolor: product.marginPercent > 40 ?
-                                (theme.palette.mode === 'dark' ? alpha('#4ade80', 0.15) : '#ECFDF5') :
-                                product.marginPercent > 20 ?
-                                (theme.palette.mode === 'dark' ? alpha('#ffa726', 0.15) : '#FEF3C7') :
-                                (theme.palette.mode === 'dark' ? alpha('#ff6b6b', 0.15) : '#FEF2F2'),
+                              borderRadius: '8px',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              px: 2,
+                              py: 1,
+                              color: product.marginPercent > 40 ? '#059669' :
+                                     product.marginPercent > 20 ? '#d97706' : '#dc2626',
+                              bgcolor: product.marginPercent > 40 ? alpha('#059669', 0.1) :
+                                      product.marginPercent > 20 ? alpha('#d97706', 0.1) : alpha('#dc2626', 0.1)
                             }}
                           >
                             {Math.round(product.marginPercent)}%
                           </Box>
                         </TableCell>
-                        <TableCell
-                          align="center"
-                          sx={{
-                            py: '10px', // py-2.5
-                            verticalAlign: 'middle'
-                          }}
-                        >
+                        <TableCell align="center">
                           {product.toPurchase > 0 ? (
                             <Typography
                               variant="body2"
                               sx={{
-                                fontFamily: 'Inter, -apple-system, sans-serif',
-                                fontWeight: 600,
-                                fontSize: '0.875rem', // text-sm
-                                lineHeight: 1.25, // leading-tight
-                                color: theme.palette.mode === 'dark' ? '#4ade80' : '#059669', // зеленый для успеха
-                                textAlign: 'center'
+                                fontWeight: 700,
+                                fontSize: '0.875rem',
+                                color: '#059669'
                               }}
                             >
-                              {Math.round(product.toPurchase)}{' '}
-                              <Box component="span" sx={{
-                                fontSize: '0.75rem',
-                                color: theme.palette.mode === 'dark' ? '#9ca3af' : '#6B7280'
-                              }}>шт</Box>
+                              {Math.round(product.toPurchase)} шт
                             </Typography>
                           ) : (
                             <Typography
                               variant="body2"
                               sx={{
-                                fontFamily: 'Inter, -apple-system, sans-serif',
-                                color: '#9CA3AF', // text-gray-400
-                                fontSize: '0.875rem', // text-sm
+                                color: '#9ca3af',
                                 fontStyle: 'italic'
                               }}
                             >
@@ -3500,9 +3528,303 @@ const PremiumPurchaseAnalytics = () => {
                         </TableCell>
                       </TableRow>
                     ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+
+            {/* Mobile Cards */}
+            <Box sx={{
+              display: { xs: 'block', lg: 'none' },
+              p: 2
+            }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {filteredData.map((product) => (
+                  <Card
+                    key={product.id}
+                    sx={{
+                      borderRadius: '12px',
+                      border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                      bgcolor: product.isHidden
+                        ? alpha(theme.palette.grey[500], 0.04)
+                        : theme.palette.background.paper,
+                      opacity: product.isHidden ? 0.7 : 1,
+                      transition: 'all 0.2s ease-in-out',
+                      '&:hover': {
+                        boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.12)}`,
+                        transform: 'translateY(-2px)'
+                      }
+                    }}
+                  >
+                    <CardContent sx={{ p: 3 }}>
+                      {/* Header with product name and urgency */}
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                          {getUrgencyIcon(product.urgencyLevel)}
+                          <Typography
+                            variant="h6"
+                            sx={{
+                              fontWeight: 600,
+                              fontSize: '1rem',
+                              color: theme.palette.text.primary,
+                              lineHeight: 1.3,
+                              cursor: 'pointer'
+                            }}
+                            onClick={() => handleProductDetailClick(product)}
+                          >
+                            {product.name}
+                          </Typography>
+                        </Box>
+                        <Checkbox
+                          checked={selectedRows.includes(product.id)}
+                          onChange={() => handleSelectRow(product.id)}
+                          sx={{
+                            ml: 1,
+                            '&.Mui-checked': {
+                              color: theme.palette.primary.main
+                            }
+                          }}
+                        />
+                      </Box>
+
+                      {/* Critical metrics in prominent cards */}
+                      <Grid container spacing={2} sx={{ mb: 2 }}>
+                        {/* Stock */}
+                        <Grid item xs={6}>
+                          <Box
+                            sx={{
+                              p: 2,
+                              borderRadius: '10px',
+                              bgcolor: product.stock <= 3
+                                ? alpha('#dc2626', 0.1)
+                                : product.stock <= 7
+                                ? alpha('#d97706', 0.1)
+                                : alpha('#059669', 0.1),
+                              border: `1px solid ${product.stock <= 3
+                                ? alpha('#dc2626', 0.2)
+                                : product.stock <= 7
+                                ? alpha('#d97706', 0.2)
+                                : alpha('#059669', 0.2)}`,
+                              textAlign: 'center'
+                            }}
+                          >
+                            <Typography variant="caption" sx={{
+                              color: 'text.secondary',
+                              fontSize: '0.7rem',
+                              fontWeight: 500,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em'
+                            }}>
+                              Остаток
+                            </Typography>
+                            <Typography variant="h6" sx={{
+                              fontWeight: 700,
+                              fontSize: '1.25rem',
+                              color: product.stock <= 3 ? '#dc2626' : product.stock <= 7 ? '#d97706' : '#059669',
+                              mt: 0.5
+                            }}>
+                              {product.stock}
+                            </Typography>
+                            <Typography variant="caption" sx={{
+                              color: 'text.secondary',
+                              fontSize: '0.7rem'
+                            }}>
+                              шт
+                            </Typography>
+                          </Box>
+                        </Grid>
+
+                        {/* Days to zero */}
+                        <Grid item xs={6}>
+                          <Box
+                            sx={{
+                              p: 2,
+                              borderRadius: '10px',
+                              bgcolor: product.daysToZero <= 7
+                                ? alpha('#dc2626', 0.1)
+                                : alpha('#6b7280', 0.05),
+                              border: `1px solid ${product.daysToZero <= 7
+                                ? alpha('#dc2626', 0.2)
+                                : alpha('#6b7280', 0.1)}`,
+                              textAlign: 'center'
+                            }}
+                          >
+                            <Typography variant="caption" sx={{
+                              color: 'text.secondary',
+                              fontSize: '0.7rem',
+                              fontWeight: 500,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em'
+                            }}>
+                              Дней до 0
+                            </Typography>
+                            <Typography variant="h6" sx={{
+                              fontWeight: 700,
+                              fontSize: '1.25rem',
+                              color: product.daysToZero <= 7 ? '#dc2626' : theme.palette.text.primary,
+                              mt: 0.5
+                            }}>
+                              {product.daysToZero}
+                            </Typography>
+                            <Typography variant="caption" sx={{
+                              color: 'text.secondary',
+                              fontSize: '0.7rem'
+                            }}>
+                              дн
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      </Grid>
+
+                      {/* Purchase recommendation - most important */}
+                      {product.toPurchase > 0 && (
+                        <Box
+                          sx={{
+                            p: 2.5,
+                            borderRadius: '12px',
+                            bgcolor: alpha('#059669', 0.08),
+                            border: `2px solid ${alpha('#059669', 0.2)}`,
+                            textAlign: 'center',
+                            mb: 2
+                          }}
+                        >
+                          <Typography variant="caption" sx={{
+                            color: '#059669',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em'
+                          }}>
+                            Рекомендовано к закупке
+                          </Typography>
+                          <Typography variant="h4" sx={{
+                            fontWeight: 800,
+                            fontSize: '1.75rem',
+                            color: '#059669',
+                            mt: 0.5,
+                            mb: 0.5
+                          }}>
+                            {Math.round(product.toPurchase)}
+                          </Typography>
+                          <Typography variant="caption" sx={{
+                            color: '#059669',
+                            fontSize: '0.8rem',
+                            fontWeight: 500
+                          }}>
+                            штук
+                          </Typography>
+                        </Box>
+                      )}
+
+                      {/* Financial info in compact grid */}
+                      <Grid container spacing={1.5}>
+                        <Grid item xs={6}>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Typography variant="caption" sx={{
+                              color: 'text.secondary',
+                              fontSize: '0.7rem',
+                              display: 'block'
+                            }}>
+                              Себестоимость
+                            </Typography>
+                            <Typography variant="body2" sx={{
+                              fontWeight: 600,
+                              color: theme.palette.text.primary,
+                              fontSize: '0.9rem'
+                            }}>
+                              {formatCurrency(product.totalCostRub)}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Typography variant="caption" sx={{
+                              color: 'text.secondary',
+                              fontSize: '0.7rem',
+                              display: 'block'
+                            }}>
+                              Розн. цена
+                            </Typography>
+                            <Typography variant="body2" sx={{
+                              fontWeight: 600,
+                              color: '#059669',
+                              fontSize: '0.9rem'
+                            }}>
+                              {formatCurrency(product.retailPrice)}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Typography variant="caption" sx={{
+                              color: 'text.secondary',
+                              fontSize: '0.7rem',
+                              display: 'block'
+                            }}>
+                              Продаж за период
+                            </Typography>
+                            <Typography variant="body2" sx={{
+                              fontWeight: 600,
+                              color: theme.palette.text.primary,
+                              fontSize: '0.9rem'
+                            }}>
+                              {product.sold} шт
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Typography variant="caption" sx={{
+                              color: 'text.secondary',
+                              fontSize: '0.7rem',
+                              display: 'block'
+                            }}>
+                              Маржа
+                            </Typography>
+                            <Typography variant="body2" sx={{
+                              fontWeight: 600,
+                              color: product.marginPercent > 40 ? '#059669' :
+                                     product.marginPercent > 20 ? '#d97706' : '#dc2626',
+                              fontSize: '0.9rem'
+                            }}>
+                              {Math.round(product.marginPercent)}%
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      </Grid>
+
+                      {/* Additional status indicators */}
+                      <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: 'wrap' }}>
+                        {product.inTransit > 0 && (
+                          <Chip
+                            label={`В пути: ${product.inTransit} шт`}
+                            size="small"
+                            sx={{
+                              bgcolor: alpha('#d97706', 0.1),
+                              color: '#d97706',
+                              border: `1px solid ${alpha('#d97706', 0.2)}`,
+                              fontWeight: 500,
+                              fontSize: '0.7rem'
+                            }}
+                          />
+                        )}
+                        <Chip
+                          label={`${product.avgPerDay.toFixed(1)} шт/день`}
+                          size="small"
+                          sx={{
+                            bgcolor: alpha(theme.palette.primary.main, 0.1),
+                            color: theme.palette.primary.main,
+                            border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                            fontWeight: 500,
+                            fontSize: '0.7rem'
+                          }}
+                        />
+                      </Box>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Box>
+            </Box>
           </Paper>
         </motion.div>
       )}
@@ -4089,30 +4411,59 @@ const PremiumPurchaseAnalytics = () => {
                       </Button>
                     )}
 
-                    {/* Кнопка скрытия товаров */}
-                    <Button
-                      variant="outlined"
-                      size="medium"
-                      startIcon={<Delete />}
-                      onClick={handleBulkHideProducts}
-                      sx={{
-                        borderRadius: '12px',
-                        px: 3,
-                        borderColor: '#f44336',
-                        color: '#f44336',
-                        fontWeight: 600,
-                        '&:hover': {
-                          borderColor: '#d32f2f',
-                          color: '#d32f2f',
-                          backgroundColor: alpha('#f44336', 0.04),
-                          transform: 'translateY(-1px)',
-                          boxShadow: '0 4px 16px rgba(244, 67, 54, 0.25)'
-                        },
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      Скрыть ({selectedProducts.length})
-                    </Button>
+                    {/* Кнопка скрытия товаров (только для видимых) */}
+                    {selectedProducts.filter(p => !p.isHidden).length > 0 && (
+                      <Button
+                        variant="outlined"
+                        size="medium"
+                        startIcon={<Delete />}
+                        onClick={handleBulkHideProducts}
+                        sx={{
+                          borderRadius: '12px',
+                          px: 3,
+                          borderColor: '#f44336',
+                          color: '#f44336',
+                          fontWeight: 600,
+                          '&:hover': {
+                            borderColor: '#d32f2f',
+                            color: '#d32f2f',
+                            backgroundColor: alpha('#f44336', 0.04),
+                            transform: 'translateY(-1px)',
+                            boxShadow: '0 4px 16px rgba(244, 67, 54, 0.25)'
+                          },
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        Скрыть ({selectedProducts.filter(p => !p.isHidden).length})
+                      </Button>
+                    )}
+
+                    {/* Кнопка показа скрытых товаров */}
+                    {selectedProducts.filter(p => p.isHidden).length > 0 && (
+                      <Button
+                        variant="outlined"
+                        size="medium"
+                        startIcon={<Visibility />}
+                        onClick={handleBulkShowProducts}
+                        sx={{
+                          borderRadius: '12px',
+                          px: 3,
+                          borderColor: '#4caf50',
+                          color: '#4caf50',
+                          fontWeight: 600,
+                          '&:hover': {
+                            borderColor: '#388e3c',
+                            color: '#388e3c',
+                            backgroundColor: alpha('#4caf50', 0.04),
+                            transform: 'translateY(-1px)',
+                            boxShadow: '0 4px 16px rgba(76, 175, 80, 0.25)'
+                          },
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        Показать ({selectedProducts.filter(p => p.isHidden).length})
+                      </Button>
+                    )}
                   </>
                 )
               })()}
@@ -4165,7 +4516,7 @@ const PremiumPurchaseAnalytics = () => {
           </Box>
           <IconButton onClick={() => setProductDetailModalOpen(false)}>
             <Close />
-                </IconButton>
+          </IconButton>
         </DialogTitle>
 
         <DialogContent sx={{ p: 3 }}>
@@ -4380,6 +4731,28 @@ const PremiumPurchaseAnalytics = () => {
         formatCurrency={formatCurrency}
       />
 
+      {/* Notification Component */}
+      <PremiumNotification
+        open={notification.open}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+        duration={5000}
+        position="top-right"
+      />
+
+      {/* Notification Component */}
+      <PremiumNotification
+        open={notification.open}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+        duration={5000}
+        position="top-right"
+      />
+
       {/* CSS Animations for pulse effect */}
       <style jsx>{`
         @keyframes pulse {
@@ -4388,6 +4761,16 @@ const PremiumPurchaseAnalytics = () => {
           100% { opacity: 1; transform: scale(1); }
         }
       `}</style>
+      {/* Notification Component */}
+      <PremiumNotification
+        open={notification.open}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+        duration={5000}
+        position="top-right"
+      />
     </Box>
   )
 }
