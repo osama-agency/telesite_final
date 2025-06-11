@@ -28,6 +28,8 @@ import InputAdornment from '@mui/material/InputAdornment'
 import Tabs from '@mui/material/Tabs'
 import Tab from '@mui/material/Tab'
 import Tooltip from '@mui/material/Tooltip'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Checkbox from '@mui/material/Checkbox'
 
 // Components Imports (unused imports removed)
 
@@ -92,6 +94,7 @@ const ProcurementPage = () => {
   const [exchangeRate] = useState(3.5) // Курс лиры к рублю
   const [tabValue, setTabValue] = useState(0)
   const [purchaseHistory, setPurchaseHistory] = useState<Purchase[]>([])
+  const [isUrgentPurchase, setIsUrgentPurchase] = useState(false)
 
   // Отладка: логируем тип purchaseHistory
   console.log('🔍 purchaseHistory type check:', {
@@ -140,12 +143,23 @@ const ProcurementPage = () => {
   const fetchPurchaseHistory = async () => {
     try {
       console.log('📋 Загрузка истории закупок...')
-      const response = await fetch('/api/purchases')
+      const response = await fetch('http://localhost:3010/api/purchases')
       const data = await response.json()
 
       if (data.success && data.data && Array.isArray(data.data.purchases)) {
-        console.log(`✅ Загружено ${data.data.total} закупок`)
-        setPurchaseHistory(data.data.purchases)
+        console.log(`✅ Загружено ${data.data.pagination.total} закупок`)
+
+        // Преобразуем данные для отображения
+        const formattedPurchases = data.data.purchases.map((p: any) => ({
+          id: p.id,
+          date: new Date(p.createdAt).toISOString(),
+          supplier: p.isUrgent ? '🔥 Срочная закупка' : 'Обычная закупка',
+          items: p.items.length,
+          totalAmount: parseFloat(p.totalCost),
+          status: 'pending' as const
+        }))
+
+        setPurchaseHistory(formattedPurchases)
       } else {
         console.warn('⚠️ Неожиданный формат данных:', data)
         setPurchaseHistory([])
@@ -203,53 +217,70 @@ const ProcurementPage = () => {
   const handleSavePurchase = async () => {
     if (purchaseItems.length === 0) {
       showSnackbar('Добавьте хотя бы одну позицию', 'error')
+
       return
     }
 
     try {
       setSaving(true)
 
-      // 1. Создать запись purchase
-      const purchaseResponse = await fetch('/api/purchases', {
+      // 1. Создать запись purchase с автоматической отправкой в Telegram
+      const purchaseResponse = await fetch('http://localhost:3010/api/purchases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          isUrgent: isUrgentPurchase,
           items: purchaseItems.map(item => ({
             productId: item.product.id,
+            name: item.product.name,
             quantity: item.quantity,
-            costTry: item.costTry,
-            costRub: item.costRub
-          })),
-          totalAmount: totals.totalAmount
+            price: item.costTry,
+            total: item.costTry * item.quantity // Общая сумма в лирах
+          }))
         })
       })
 
-      if (!purchaseResponse.ok) throw new Error('Failed to create purchase')
+      if (!purchaseResponse.ok) {
+        const errorData = await purchaseResponse.json()
+        throw new Error(errorData.error || 'Failed to create purchase')
+      }
 
-      // 2. Обновить остатки товаров
+      const purchaseData = await purchaseResponse.json()
+
+      console.log('✅ Закупка создана:', purchaseData)
+
+      // 2. Обновить остатки товаров (если есть такой API)
       for (const item of purchaseItems) {
-        await fetch(`http://localhost:3001/api/products/${item.product.id}/stock`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            quantity: item.quantity,
-            operation: 'add'
+        try {
+          await fetch(`/api/products/${item.product.id}/stock`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              quantity: item.quantity,
+              operation: 'add'
+            })
           })
-        })
+        } catch (error) {
+          console.warn('Не удалось обновить остатки товара:', item.product.name, error)
+        }
       }
 
       // 3. Добавить расход в Expenses
-              await fetch('/api/expenses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          category: 'Закупка товаров',
-          amount: totals.totalAmount,
-          description: `Закупка ${totals.totalPositions} позиций`
+      try {
+        await fetch('/api/expenses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            category: 'Закупка товаров',
+            amount: totals.totalAmount,
+            description: `Закупка ${totals.totalPositions} позиций`
+          })
         })
-      })
+      } catch (error) {
+        console.warn('Не удалось добавить расход:', error)
+      }
 
-      showSnackbar('Закупка добавлена, расход занесён', 'success')
+      showSnackbar(`Закупка #${purchaseData.data.id.split('_')[1]} создана и отправлена в Telegram! 📱`, 'success')
       setPurchaseItems([])
       fetchPurchaseHistory()
 
@@ -471,6 +502,25 @@ const ProcurementPage = () => {
                     Курс: 1 ₺ = {exchangeRate} ₽
                   </Typography>
                 </Alert>
+
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={isUrgentPurchase}
+                      onChange={(e) => setIsUrgentPurchase(e.target.checked)}
+                      color="error"
+                    />
+                  }
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <span>Срочная закупка</span>
+                      <Typography variant="caption" color="text.secondary">
+                        (будет помечена 🔥)
+                      </Typography>
+                    </Box>
+                  }
+                  sx={{ mb: 1 }}
+                />
 
                 <Tooltip title="Или используйте ⌘+Enter">
                   <span>

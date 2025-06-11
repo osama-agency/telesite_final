@@ -13,6 +13,7 @@ import orderRoutes from './routes/orderRoutes';
 import priceRoutes from './routes/prices';
 import expenseRoutes from './routes/expenseRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
+import purchaseRoutes from './routes/purchaseRoutes';
 
 // Загружаем переменные окружения
 dotenv.config();
@@ -44,6 +45,7 @@ app.use('/api', orderRoutes);
 app.use('/api/prices', priceRoutes);
 app.use('/api', expenseRoutes);
 app.use('/api', analyticsRoutes);
+app.use('/api/purchases', purchaseRoutes);
 
 // Статические файлы для загруженных изображений
 app.use('/uploads', express.static('uploads'));
@@ -54,7 +56,7 @@ app.use('*', (req, res) => {
 });
 
 // Error handler
-app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((error: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Error:', error);
   res.status(500).json({
     error: 'Internal server error',

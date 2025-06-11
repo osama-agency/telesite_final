@@ -68,7 +68,7 @@ import {
   ShoppingCart,
   Warning,
   CheckCircle,
-  Error,
+  Error as ErrorIcon,
   Inventory,
   TrendingUp,
   TrendingDown,
@@ -1591,7 +1591,15 @@ const PremiumPurchaseAnalytics = () => {
           // Определяем статус на основе потребности в закупке
           // Определение статуса доставки на основе реальных данных
           let deliveryStatus: Product['deliveryStatus']
-          const inTransitQty = 0 // Временно отключаем запросы к API закупок
+          let inTransitQty = 0;
+          try {
+            const purchasesRes = await fetch(`/api/purchases?productName=${encodeURIComponent(apiProduct.name)}`);
+            if (purchasesRes.ok) {
+              const purchasesData = await purchasesRes.json();
+              // Суммируем все закупки в статусе "в_пути" и "оплачено"
+              inTransitQty = purchasesData.data?.purchases?.filter((p: any) => ['в_пути', 'оплачено'].includes(p.status)).reduce((sum: number, p: any) => sum + (p.quantity || 0), 0) || 0;
+            }
+          } catch (e) { console.warn('Ошибка загрузки закупок для inTransit', e); }
 
           if (inTransitQty > 0) {
             deliveryStatus = 'в_пути'
@@ -1618,13 +1626,7 @@ const PremiumPurchaseAnalytics = () => {
             toPurchase: toPurchase,
             costTry: parseFloat(costTry.toFixed(2)),
             costRub: parseFloat(costRub.toFixed(2)),
-            expenses: expenseBreakdown || {
-              delivery: 350,
-              logistics: parseFloat((expenses * 0.3).toFixed(2)),
-              advertising: parseFloat((expenses * 0.5).toFixed(2)),
-              other: parseFloat((expenses * 0.2).toFixed(2)),
-              total: parseFloat(expenses.toFixed(2))
-            },
+            expenses: expenseBreakdown || (await calculateExpenses(apiProduct.name)).breakdown,
             expenseBreakdown: expenseBreakdown,
             totalCostRub: parseFloat(totalCostRub.toFixed(2)),
             retailPrice: parseFloat(retailPrice.toFixed(2)),
@@ -2055,14 +2057,15 @@ const PremiumPurchaseAnalytics = () => {
         const quantity = product.toPurchase > 0 ? product.toPurchase : Math.max(1, product.minStock - product.stock)
         return {
           productId: product.id,
-          productName: product.name, // Добавляем название товара
+          name: product.name,
           quantity: quantity,
-          costTry: product.costTry,
-          costRub: product.costRub
+          price: product.costTry,
+          total: product.costTry * quantity
         }
       })
 
-      const totalAmount = purchaseItems.reduce((sum, item) => sum + (item.costRub * item.quantity), 0)
+      const totalAmount = purchaseItems.reduce((sum, item) => sum + item.total, 0)
+      const isUrgent = selectedProductsForPurchase.some(p => p.urgencyLevel === 'critical')
 
       // 1. Создать запись в истории закупок
       console.log('📝 Создание закупки в истории...')
@@ -2070,19 +2073,16 @@ const PremiumPurchaseAnalytics = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          supplier: purchaseForm.supplier || 'Аналитика закупок',
-          items: purchaseItems,
-          totalAmount: totalAmount,
-          expectedDeliveryDate: purchaseForm.expectedDeliveryDate,
-          comments: purchaseForm.comments,
-          priority: purchaseForm.priority
+          isUrgent: isUrgent,
+          items: purchaseItems
         })
       })
 
       if (!purchaseResponse.ok) {
         console.warn('⚠️ API закупок недоступен, продолжаем без записи в историю')
       } else {
-        console.log('✅ Закупка успешно записана в историю')
+        const purchaseData = await purchaseResponse.json()
+        console.log('✅ Закупка успешно записана в историю:', purchaseData)
       }
 
       // 2. Добавить расход в систему расходов (опционально)
@@ -3011,7 +3011,7 @@ const PremiumPurchaseAnalytics = () => {
       {error && (
         <Paper sx={{ p: 3, bgcolor: alpha(theme.palette.error.main, 0.05), border: `1px solid ${alpha(theme.palette.error.main, 0.2)}` }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Warning sx={{ color: 'error.main' }} />
+            <ErrorIcon sx={{ color: 'error.main' }} />
             <Box>
               <Typography variant="h6" color="error.main">Ошибка загрузки данных</Typography>
               <Typography variant="body2" color="text.secondary">{error}</Typography>

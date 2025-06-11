@@ -5,8 +5,20 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
+        source: '/api/login',
+        destination: '/api/login' // Keep login route handled by Next.js
+      },
+      {
         source: '/api/auth/:path*',
         destination: '/api/auth/:path*' // NextAuth остается локальным
+      },
+      {
+        source: '/api/purchases/:path*',
+        destination: 'http://localhost:3010/api/purchases/:path*' // Purchases API на порту 3010
+      },
+      {
+        source: '/api/purchases',
+        destination: 'http://localhost:3010/api/purchases' // Purchases API на порту 3010
       },
       {
         source: '/api/:path*',

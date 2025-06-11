@@ -37,7 +37,6 @@ const PremiumDateRangePicker: React.FC<PremiumDateRangePickerProps> = ({
   const { range, setRange } = useDateRangeStore()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('lg'))
-  const isTablet = useMediaQuery(theme.breakpoints.down('md'))
 
   // States
   const [isOpen, setIsOpen] = useState(false)
@@ -46,7 +45,7 @@ const PremiumDateRangePicker: React.FC<PremiumDateRangePickerProps> = ({
 
   console.log('🗓️ PremiumDateRangePicker component rendered')
 
-  // Format date range display  
+  // Format date range display
   const formatDateRange = useCallback(() => {
     if (!range.start || !range.end) return 'Выбрать период'
 
@@ -58,8 +57,8 @@ const PremiumDateRangePicker: React.FC<PremiumDateRangePickerProps> = ({
       if (date.toDateString() === today.toDateString()) return 'сегодня'
       if (date.toDateString() === yesterday.toDateString()) return 'вчера'
 
-      return date.toLocaleDateString('ru-RU', { 
-        day: 'numeric', 
+      return date.toLocaleDateString('ru-RU', {
+        day: 'numeric',
         month: 'short'
       })
     }
@@ -85,7 +84,7 @@ const PremiumDateRangePicker: React.FC<PremiumDateRangePickerProps> = ({
       isSelected: () => {
         if (!range.start || !range.end) return false
         const today = new Date()
-        return range.start.toDateString() === today.toDateString() && 
+        return range.start.toDateString() === today.toDateString() &&
                range.end.toDateString() === today.toDateString()
       }
     },
@@ -103,7 +102,7 @@ const PremiumDateRangePicker: React.FC<PremiumDateRangePickerProps> = ({
         if (!range.start || !range.end) return false
         const yesterday = new Date()
         yesterday.setDate(yesterday.getDate() - 1)
-        return range.start.toDateString() === yesterday.toDateString() && 
+        return range.start.toDateString() === yesterday.toDateString() &&
                range.end.toDateString() === yesterday.toDateString()
       }
     },
@@ -123,7 +122,7 @@ const PremiumDateRangePicker: React.FC<PremiumDateRangePickerProps> = ({
         const end = new Date()
         const start = new Date()
         start.setDate(end.getDate() - 6)
-        return Math.abs(range.start.getTime() - start.getTime()) < 86400000 && 
+        return Math.abs(range.start.getTime() - start.getTime()) < 86400000 &&
                Math.abs(range.end.getTime() - end.getTime()) < 86400000
       }
     },
@@ -143,7 +142,7 @@ const PremiumDateRangePicker: React.FC<PremiumDateRangePickerProps> = ({
         const end = new Date()
         const start = new Date()
         start.setDate(end.getDate() - 29)
-        return Math.abs(range.start.getTime() - start.getTime()) < 86400000 && 
+        return Math.abs(range.start.getTime() - start.getTime()) < 86400000 &&
                Math.abs(range.end.getTime() - end.getTime()) < 86400000
       }
     },
@@ -165,7 +164,7 @@ const PremiumDateRangePicker: React.FC<PremiumDateRangePickerProps> = ({
         const quarter = Math.floor(now.getMonth() / 3)
         const start = new Date(now.getFullYear(), quarter * 3, 1)
         const end = new Date(now.getFullYear(), quarter * 3 + 3, 0)
-        return Math.abs(range.start.getTime() - start.getTime()) < 86400000 && 
+        return Math.abs(range.start.getTime() - start.getTime()) < 86400000 &&
                Math.abs(range.end.getTime() - end.getTime()) < 86400000
       }
     },
@@ -183,7 +182,7 @@ const PremiumDateRangePicker: React.FC<PremiumDateRangePickerProps> = ({
         if (!range.start || !range.end) return false
         const yearStart = new Date('2020-01-01')
         const today = new Date()
-        return Math.abs(range.start.getTime() - yearStart.getTime()) < 86400000 && 
+        return Math.abs(range.start.getTime() - yearStart.getTime()) < 86400000 &&
                Math.abs(range.end.getTime() - today.getTime()) < 86400000
       }
     }
@@ -258,7 +257,7 @@ const PremiumDateRangePicker: React.FC<PremiumDateRangePickerProps> = ({
       >
         <i className="bx-calendar" />
       </Box>
-      
+
       <Typography
         variant="body2"
         sx={{
@@ -362,9 +361,9 @@ const PremiumDateRangePicker: React.FC<PremiumDateRangePickerProps> = ({
             <Typography variant="h6" fontWeight={600} letterSpacing="-0.01em">
               Выбор периода
             </Typography>
-            <Typography 
-              variant="body2" 
-              color="text.secondary" 
+            <Typography
+              variant="body2"
+              color="text.secondary"
               sx={{ fontSize: '0.8125rem', mt: 0.25 }}
             >
               Выберите диапазон для анализа
@@ -377,7 +376,7 @@ const PremiumDateRangePicker: React.FC<PremiumDateRangePickerProps> = ({
           sx={{
             color: 'text.secondary',
             bgcolor: alpha(theme.palette.action.hover, 0.5),
-            '&:hover': { 
+            '&:hover': {
               bgcolor: 'action.hover',
               transform: 'scale(1.05)'
             }
@@ -458,8 +457,8 @@ const PremiumDateRangePicker: React.FC<PremiumDateRangePickerProps> = ({
                       key={preset.label}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ 
-                        duration: 0.4, 
+                      transition={{
+                        duration: 0.4,
                         delay: index * 0.1,
                         ease: [0.4, 0, 0.2, 1]
                       }}
@@ -515,8 +514,8 @@ const PremiumDateRangePicker: React.FC<PremiumDateRangePickerProps> = ({
                             fontSize: '1.5rem',
                             flexShrink: 0,
                             ...(isSelected ? {
-                              bgcolor: alpha('white', 0.15),
-                              color: 'white'
+                              bgcolor: alpha('#fff', 0.15),
+                              color: '#fff'
                             } : {
                               bgcolor: alpha(theme.palette.primary.main, 0.08),
                               color: theme.palette.primary.main
@@ -535,7 +534,7 @@ const PremiumDateRangePicker: React.FC<PremiumDateRangePickerProps> = ({
                               fontWeight: 600,
                               lineHeight: 1.2,
                               mb: 0.5,
-                              color: isSelected ? 'white' : 'text.primary'
+                              color: isSelected ? '#fff' : 'text.primary'
                             }}
                           >
                             {preset.label}
@@ -545,7 +544,7 @@ const PremiumDateRangePicker: React.FC<PremiumDateRangePickerProps> = ({
                             sx={{
                               fontSize: '0.875rem',
                               lineHeight: 1.3,
-                              color: isSelected ? alpha('white', 0.8) : 'text.secondary'
+                              color: isSelected ? alpha('#fff', 0.8) : 'text.secondary'
                             }}
                           >
                             {preset.description}
@@ -559,11 +558,11 @@ const PremiumDateRangePicker: React.FC<PremiumDateRangePickerProps> = ({
                               width: 24,
                               height: 24,
                               borderRadius: '50%',
-                              bgcolor: alpha('white', 0.2),
+                              bgcolor: alpha('#fff', 0.2),
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              color: 'white'
+                              color: '#fff'
                             }}
                           >
                             ✓
@@ -812,7 +811,7 @@ const PremiumDateRangePicker: React.FC<PremiumDateRangePickerProps> = ({
                 <Box sx={{ fontSize: '1.25rem' }}>✅</Box>
                 <Typography
                   variant="body1"
-                  sx={{ 
+                  sx={{
                     fontSize: '1.0625rem',
                     fontWeight: 600,
                     color: 'text.primary'
@@ -1011,4 +1010,4 @@ const PremiumDateRangePicker: React.FC<PremiumDateRangePickerProps> = ({
   )
 }
 
-export default PremiumDateRangePicker 
+export default PremiumDateRangePicker
