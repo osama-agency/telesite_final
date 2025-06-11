@@ -244,7 +244,7 @@ const ProcurementPage = () => {
         totalRub: updatedItems[existingItemIndex].totalRub + totalRub
       }
       setPurchaseItems(updatedItems)
-      showSnackbar(`Количество ${selectedProduct.name} увеличено на ${quantity}`, 'success')
+      showSnackbar(`Количество ${selectedProduct?.name || 'товара'} увеличено на ${quantity}`, 'success')
     } else {
       // Добавляем новую позицию
     const newItem: PurchaseItem = {
@@ -256,7 +256,7 @@ const ProcurementPage = () => {
       totalRub
     }
     setPurchaseItems([...purchaseItems, newItem])
-      showSnackbar(`${selectedProduct.name} добавлен в закупку`, 'success')
+      showSnackbar(`${selectedProduct?.name || 'Товар'} добавлен в закупку`, 'success')
     }
 
     // Очистка формы
@@ -277,7 +277,7 @@ const ProcurementPage = () => {
     const itemToRemove = purchaseItems.find(item => item.id === id)
     setPurchaseItems(purchaseItems.filter(item => item.id !== id))
     if (itemToRemove) {
-      showSnackbar(`${itemToRemove.product.name} удален из закупки`, 'success')
+      showSnackbar(`${itemToRemove.product?.name || 'Товар'} удален из закупки`, 'success')
     }
   }
 
@@ -306,8 +306,8 @@ const ProcurementPage = () => {
         body: JSON.stringify({
           isUrgent: isUrgentPurchase,
           items: purchaseItems.map(item => ({
-            productId: item.product.id,
-            name: item.product.name,
+            productId: item.product?.id || null,
+            name: item.product?.name || 'Неизвестный товар',
             quantity: item.quantity,
             price: item.costTry,
             total: item.totalRub
@@ -345,7 +345,7 @@ const ProcurementPage = () => {
           `💰 Сумма: ${totals.totalAmount.toLocaleString('ru-RU')} ₽\n\n` +
           `📋 *Состав закупки:*\n` +
           purchaseItems.map(item =>
-            `• ${item.product.name} - ${item.quantity} шт × ${item.costTry.toFixed(2)} ₺`
+            `• ${item.product?.name || 'Неизвестный товар'} - ${item.quantity} шт × ${item.costTry.toFixed(2)} ₺`
           ).join('\n')
 
         console.log('📤 Отправляю уведомление в Telegram:', {
@@ -439,7 +439,7 @@ const ProcurementPage = () => {
             `💰 Сумма: ${purchase.totalAmount.toLocaleString('ru-RU')} ₽\n\n` +
             `📋 *Состав закупки:*\n` +
             purchase.items.map(item =>
-              `• ${item.product.name} - ${item.quantity} шт`
+              `• ${item.product?.name || 'Неизвестный товар'} - ${item.quantity} шт`
             ).join('\n')
 
           await fetch('/api/telegram', {
@@ -468,8 +468,8 @@ const ProcurementPage = () => {
   const handleOpenReceiveModal = (purchase: Purchase) => {
     setReceivingPurchase(purchase)
     setReceiveItems(purchase.items.map(item => ({
-      productId: item.product.id,
-      productName: item.product.name,
+      productId: item.product?.id || 0,
+      productName: item.product?.name || 'Неизвестный товар',
       expectedQuantity: item.quantity,
       actualQuantity: item.quantity // По умолчанию ожидаемое количество
     })))
@@ -696,9 +696,9 @@ const ProcurementPage = () => {
                       {purchaseItems.map((item) => (
                         <TableRow key={item.id} hover>
                           <TableCell>
-                            <Typography variant="body2">{item.product.name}</Typography>
+                            <Typography variant="body2">{item.product?.name || 'Неизвестный товар'}</Typography>
                             <Typography variant="caption" color="text.secondary">
-                              {item.product.sku}
+                              {item.product?.sku || 'N/A'}
                             </Typography>
                           </TableCell>
                           <TableCell align="right">{item.quantity}</TableCell>
@@ -1190,7 +1190,7 @@ const ProcurementPage = () => {
                                           fontSize: '0.875rem'
                                         }}
                                       >
-                                        • {item.product.name} - {item.quantity} шт
+                                        • {item.product?.name || 'Неизвестный товар'} - {item.quantity} шт
                                       </Typography>
                                     ))}
                                   </Box>
