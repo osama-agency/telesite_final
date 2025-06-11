@@ -453,7 +453,26 @@ const AviasalesOrdersTable = () => {
     event.stopPropagation()
 
     try {
-      await navigator.clipboard.writeText(amount)
+      // Check if clipboard API is supported
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(amount)
+      } else {
+        // Fallback for unsupported browsers or non-secure contexts
+        const textArea = document.createElement('textarea')
+        textArea.value = amount
+        textArea.style.position = 'fixed'
+        textArea.style.left = '-999999px'
+        textArea.style.top = '-999999px'
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+
+        try {
+          document.execCommand('copy')
+        } finally {
+          document.body.removeChild(textArea)
+        }
+      }
 
       // Enhanced success feedback
       setSnackbar({
@@ -570,14 +589,13 @@ const AviasalesOrdersTable = () => {
 
   // Render mobile cards - Aviasales × Notion × Linear style
   const renderMobileCards = () => (
-    <Box className="lg:hidden">
-
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
       {/* Cards Container */}
       <Box
         sx={{
           overflowY: 'auto',
-          maxHeight: 'calc(100vh - 240px)',
+          flex: 1,
           '&::-webkit-scrollbar': { display: 'none' },
           msOverflowStyle: 'none',
           scrollbarWidth: 'none'
@@ -864,8 +882,13 @@ const AviasalesOrdersTable = () => {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          mt: 3,
-          gap: 2
+          pt: 2,
+          pb: 2,
+          gap: 2,
+          flexShrink: 0,
+          borderTop: '1px solid',
+          borderColor: 'divider',
+          bgcolor: 'background.paper'
         }}>
           <IconButton
             size="small"
@@ -908,15 +931,19 @@ const AviasalesOrdersTable = () => {
   return (
     <Box sx={{
       bgcolor: 'background.default',
-      pt: 2,
-      pb: 3
+      height: 'calc(100vh - 64px)', // Вычитаем высоту navbar
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden'
     }}>
       {/* Header Section */}
       <Box sx={{
-        mb: 0,
+        p: 3,
+        pb: 0,
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        flexShrink: 0
       }}>
         <Typography
           variant="h4"
@@ -998,7 +1025,9 @@ const AviasalesOrdersTable = () => {
         display: { xs: 'none', lg: 'flex' },
         alignItems: 'center',
         gap: 2,
-        mb: 3
+        px: 3,
+        pb: 2,
+        flexShrink: 0
       }}>
         <Typography
           variant="body2"
@@ -1184,21 +1213,28 @@ const AviasalesOrdersTable = () => {
       </Box>
 
       {/* Mobile Cards */}
-      {isMobile && renderMobileCards()}
+      {isMobile && (
+        <Box sx={{ flex: 1, overflow: 'hidden', px: 3 }}>
+          {renderMobileCards()}
+        </Box>
+      )}
 
       {/* Desktop Table */}
-      <Box className="hidden lg:block">
+      <Box className="hidden lg:flex lg:flex-col" sx={{ flex: 1, overflow: 'hidden', px: 3 }}>
         <Paper
           elevation={1}
           sx={{
             borderRadius: 2,
-            overflow: 'hidden'
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%'
           }}
         >
           <TableContainer
             sx={{
-              maxHeight: 'calc(100vh - 350px)',
-              minHeight: 400
+              flex: 1,
+              overflow: 'auto'
             }}
           >
             <Table stickyHeader>
@@ -1553,7 +1589,8 @@ const AviasalesOrdersTable = () => {
             px: 3,
             py: 2,
             borderTop: `1px solid ${theme.palette.divider}`,
-            bgcolor: 'background.paper'
+            bgcolor: 'background.paper',
+            flexShrink: 0
           }}
         >
           {/* Left: Rows per page */}

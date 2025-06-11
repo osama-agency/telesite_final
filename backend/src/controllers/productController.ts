@@ -266,19 +266,59 @@ export const getHiddenProducts = async (req: Request, res: Response) => {
 export const updateProductStock = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { stockQuantity } = req.body;
+    const { stockQuantity, quantity, operation } = req.body;
+
+    // Поддерживаем как прямое обновление, так и операции добавления/вычитания
+    let newStockQuantity: number;
+
+    if (stockQuantity !== undefined) {
+      // Прямое обновление остатка
+      newStockQuantity = parseInt(stockQuantity);
+    } else if (quantity !== undefined && operation) {
+      // Операции добавления/вычитания
+      const currentProduct = await prisma.product.findUnique({
+        where: { id: parseInt(id) },
+        select: { stockQuantity: true, name: true }
+      });
+
+      if (!currentProduct) {
+        return res.status(404).json({
+          success: false,
+          error: 'Товар не найден'
+        });
+      }
+
+      const currentStock = currentProduct.stockQuantity || 0;
+      const changeQuantity = parseInt(quantity);
+
+      if (operation === 'add') {
+        newStockQuantity = currentStock + changeQuantity;
+      } else if (operation === 'subtract') {
+        newStockQuantity = Math.max(0, currentStock - changeQuantity);
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: 'Некорректная операция. Используйте "add" или "subtract"'
+        });
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: 'Укажите stockQuantity или quantity с operation'
+      });
+    }
 
     const product = await prisma.product.update({
       where: {
         id: parseInt(id)
       },
       data: {
-        stockQuantity: parseInt(stockQuantity),
+        stockQuantity: newStockQuantity,
         updatedAt: new Date()
       }
     });
 
-    console.log(`📦 Обновлен остаток товара ${product.name}: ${stockQuantity} шт`);
+    console.log(`📦 Обновлен остаток товара ${product.name}: ${newStockQuantity} шт`);
 
     res.json({
       success: true,

@@ -108,9 +108,16 @@ const Login = () => {
       router.replace(getLocalizedUrl(redirectURL, locale as Locale))
     } else {
       if (res?.error) {
-        const error = JSON.parse(res.error)
+        try {
+          const error = JSON.parse(res.error)
 
-        setErrorState(error)
+          setErrorState(error)
+        } catch {
+          // If error is not JSON, treat it as a string message
+          setErrorState({
+            message: [res.error]
+          })
+        }
       }
     }
   }

@@ -13,6 +13,7 @@ import type { Locale } from '@configs/i18n'
 
 // Component Imports
 import ConsoleFilter from '@/components/ConsoleFilter'
+import Providers from '@/components/Providers'
 
 // HOC Imports
 import TranslationWrapper from '@/hocs/TranslationWrapper'
@@ -48,10 +49,15 @@ const RootLayout = async (props: ChildrenType & { params: Promise<{ lang: Locale
   return (
     <TranslationWrapper headersList={headersList} lang={params.lang}>
       <html id='__next' lang={params.lang} dir={direction} suppressHydrationWarning>
+        <head>
+          <meta name="emotion-insertion-point" content="" />
+        </head>
         <body className='flex is-full min-bs-full flex-auto flex-col'>
           <InitColorSchemeScript attribute='data' defaultMode={systemMode} />
-          <ConsoleFilter />
-          {children}
+          <Providers direction={direction}>
+            <ConsoleFilter />
+            {children}
+          </Providers>
         </body>
       </html>
     </TranslationWrapper>

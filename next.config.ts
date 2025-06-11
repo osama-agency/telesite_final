@@ -14,16 +14,18 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/api/purchases/:path*',
-        destination: 'http://localhost:3010/api/purchases/:path*' // Purchases API на порту 3010
+        destination: 'http://localhost:3011/api/purchases/:path*' // Purchases API на порту 3011
       },
       {
         source: '/api/purchases',
-        destination: 'http://localhost:3010/api/purchases' // Purchases API на порту 3010
-      },
-      {
-        source: '/api/:path*',
-        destination: 'http://localhost:3011/api/:path*'
+        destination: 'http://localhost:3011/api/purchases' // Purchases API на порту 3011
       }
+
+      // Убираем catch-all проксирование, чтобы локальные API routes работали
+      // {
+      //   source: '/api/:path*',
+      //   destination: 'http://localhost:3011/api/:path*'
+      // }
     ]
   },
   redirects: async () => {

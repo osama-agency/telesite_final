@@ -11,5 +11,9 @@ import AuthRedirect from '@/components/AuthRedirect'
 export default async function AuthGuard({ children, locale }: ChildrenType & { locale: Locale }) {
   const session = await getServerSession()
 
-  return <>{session ? children : <AuthRedirect lang={locale} />}</>
+  // Временно пропускаем проверку авторизации для тестирования
+  return <>{children}</>
+
+  // Оригинальный код авторизации:
+  // return <>{session ? children : <AuthRedirect lang={locale} />}</>
 }

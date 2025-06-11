@@ -1,3 +1,4 @@
+@import '../styles/premium-calendar-mobile.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -34,10 +35,22 @@
   border-color: theme('borderColor.DEFAULT', currentColor);
 }
 
+/* Full height layout for modern table views */
 html {
   display: flex;
   inline-size: 100%;
   min-block-size: 100%;
+  block-size: 100%;
+}
+
+body {
+  block-size: 100%;
+}
+
+#__next {
+  block-size: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 a {
@@ -184,4 +197,22 @@ code {
 
 .scrollbar-thumb-\[\#4c4c4c\]\/70::-webkit-scrollbar-thumb:hover {
   background-color: rgba(76, 76, 76, 0.9);
+}
+
+/* Full height utilities for table views */
+.full-height-table {
+  block-size: calc(100vh - 120px) !important;
+  min-block-size: 400px !important;
+}
+
+.full-height-layout {
+  block-size: 100vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.table-container-full {
+  flex: 1 !important;
+  overflow: auto !important;
+  min-block-size: 0 !important;
 }

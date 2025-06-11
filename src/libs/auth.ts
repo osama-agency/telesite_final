@@ -34,7 +34,7 @@ export const authOptions: NextAuthOptions = {
           const baseUrl =
             process.env.API_URL ??
             process.env.NEXTAUTH_URL ??
-            'http://localhost:3001' // fallback for dev
+            'http://localhost:3000' // исправлен порт для текущего сервера
 
           const res = await fetch(`${baseUrl}/api/login`, {
             method: 'POST',
@@ -122,6 +122,19 @@ export const authOptions: NextAuthOptions = {
       }
 
       return session
+    },
+    async redirect({ url, baseUrl }) {
+      // Если это редирект после входа, направляем на главную страницу дашборда
+      if (url.startsWith('/')) {
+        return `${baseUrl}/ru/dashboard`
+      }
+
+      // Если внешний URL, используем baseUrl с дашбордом
+      if (new URL(url).origin === baseUrl) {
+        return url
+      }
+
+      return `${baseUrl}/ru/dashboard`
     }
   }
 }

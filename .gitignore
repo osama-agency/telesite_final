@@ -148,3 +148,16 @@ Thumbs.db
 
 # Turbo
 .turbo
+
+# Project specific
+backend.zip
+*.zip
+logs/
+server.log
+
+# Prisma
+backend/.env
+.env
+
+# Documentation files that might contain sensitive info
+*.md.backup

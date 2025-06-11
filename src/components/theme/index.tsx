@@ -95,6 +95,7 @@ const CustomThemeProvider = (props: Props) => {
   return (
     <AppRouterCacheProvider
       options={{
+        key: 'css',
         prepend: true,
         ...(direction === 'rtl' && {
           key: 'rtl',

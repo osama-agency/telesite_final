@@ -28,6 +28,9 @@ router.put('/products/:id/cost', updateProductCost);
 // PUT /api/products/:id/stock - обновить остаток товара
 router.put('/products/:id/stock', updateProductStock);
 
+// PATCH /api/products/:id/stock - операции с остатком (add/subtract)
+router.patch('/products/:id/stock', updateProductStock);
+
 // PUT /api/products/:id/price - обновить цену товара
 router.put('/products/:id/price', updateProductPrice);
 

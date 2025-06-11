@@ -1,44 +1,27 @@
-// Next Imports
-import { NextRequest, NextResponse } from 'next/server'
-
-import type { UserTable } from './users'
-
-type ResponseUser = Omit<UserTable, 'password'>
-
-// Mock data for demo purpose
-import { users } from './users'
+import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json()
 
-    // Простая проверка для демо
+    // Учетные данные администратора согласно памяти
     if (email === 'go@osama.agency' && password === 'sfera13') {
       return NextResponse.json({
-        id: '1',
+        id: 'admin_user',
         name: 'Root Admin',
         email: 'go@osama.agency',
-        role: 'admin'
-      })
-    }
-
-    // Дополнительные тестовые пользователи
-    if (email === 'admin@test.com' && password === 'admin123') {
-      return NextResponse.json({
-        id: '2',
-        name: 'Test Admin',
-        email: 'admin@test.com',
-        role: 'admin'
+        role: 'administrator'
       })
     }
 
     return NextResponse.json(
-      { error: 'Invalid credentials' },
+      { error: 'Неверные учетные данные' },
       { status: 401 }
     )
   } catch (error) {
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Ошибка сервера' },
       { status: 500 }
     )
   }

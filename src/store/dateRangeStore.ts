@@ -12,8 +12,23 @@ interface DateRangeState {
   subscribe: (listener: () => void) => () => void
 }
 
+// Функция для получения периода "последние 30 дней" по умолчанию
+const getDefaultDateRange = (): DateRange => {
+  // Проверяем, что мы на клиенте, чтобы избежать hydration mismatch
+  if (typeof window === 'undefined') {
+    return { start: null, end: null }
+  }
+
+  const end = new Date()
+  const start = new Date()
+
+  start.setDate(end.getDate() - 29) // 30 дней включая сегодня
+
+  return { start, end }
+}
+
 export const useDateRangeStore = create<DateRangeState>((set, get) => ({
-  range: { start: null, end: null },
+  range: getDefaultDateRange(), // Устанавливаем "последние 30 дней" по умолчанию
   setRange: (range) => {
     set({ range })
     get().listeners.forEach(fn => fn())
@@ -24,6 +39,7 @@ export const useDateRangeStore = create<DateRangeState>((set, get) => ({
 
     return () => {
       const idx = get().listeners.indexOf(listener)
+
       if (idx > -1) get().listeners.splice(idx, 1)
     }
   }

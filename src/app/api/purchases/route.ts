@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 // In-memory storage for purchases
 let purchases: any[] = []
@@ -6,86 +6,44 @@ let purchaseIdCounter = 1
 
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '25')
-    const status = searchParams.get('status')
+    const { searchParams } = new URL(request.url)
+    const queryString = searchParams.toString()
 
-    let filteredPurchases = [...purchases]
+    const backendUrl = `http://localhost:3011/api/purchases${queryString ? `?${queryString}` : ''}`
 
-    // Filter by status if provided
-    if (status && status !== 'all') {
-      filteredPurchases = filteredPurchases.filter(purchase => purchase.status === status)
-    }
+    const response = await fetch(backendUrl)
+    const data = await response.json()
 
-    // Apply pagination
-    const offset = (page - 1) * limit
-    const paginatedPurchases = filteredPurchases.slice(offset, offset + limit)
-
-    return Response.json({
-      success: true,
-      data: {
-        purchases: paginatedPurchases,
-        total: filteredPurchases.length,
-        page,
-        limit,
-        totalPages: Math.ceil(filteredPurchases.length / limit)
-      }
-    })
+    return NextResponse.json(data)
   } catch (error) {
-    console.error('Error fetching purchases:', error)
-    return Response.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    )
+    console.error('Error proxying purchases request:', error)
+    return NextResponse.json({
+      success: false,
+      error: 'Ошибка получения закупок'
+    }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { supplier, items, totalAmount, expectedDeliveryDate, comments, priority } = body
 
-    // Create new purchase record
-    const newPurchase = {
-      id: purchaseIdCounter++,
-      supplier: supplier || 'Неизвестный поставщик',
-      items: items.map((item: any) => ({
-        productId: item.productId,
-        productName: item.productName, // Добавляем название товара
-        quantity: item.quantity,
-        costTry: item.costTry,
-        costRub: item.costRub,
-        totalCost: item.costRub * item.quantity
-      })),
-      totalAmount: totalAmount || 0,
-      status: 'в_пути',
-      createdAt: new Date().toISOString(),
-      expectedDeliveryDate: expectedDeliveryDate,
-      comments: comments || '',
-      priority: priority || 'normal'
-    }
-
-    // Add to storage
-    purchases.push(newPurchase)
-
-    console.log('💾 Создана новая закупка:', {
-      id: newPurchase.id,
-      supplier: newPurchase.supplier,
-      itemsCount: newPurchase.items.length,
-      totalAmount: newPurchase.totalAmount
+    const response = await fetch('http://localhost:3011/api/purchases', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body)
     })
 
-    return Response.json({
-      success: true,
-      data: newPurchase,
-      message: 'Закупка успешно создана'
-    })
+    const data = await response.json()
+
+    return NextResponse.json(data, { status: response.status })
   } catch (error) {
     console.error('Error creating purchase:', error)
-    return Response.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({
+      success: false,
+      error: 'Ошибка создания закупки'
+    }, { status: 500 })
   }
 }

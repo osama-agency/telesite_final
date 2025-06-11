@@ -18,6 +18,7 @@ import VerticalNav, { NavHeader, NavCollapseIcons } from '@menu/vertical-menu'
 import VerticalMenu from './VerticalMenu'
 import Logo from '@components/layout/shared/Logo'
 import AnimatedSidebar from './AnimatedSidebar'
+import SidebarFooter from './SidebarFooter'
 
 // Hook Imports
 import useVerticalNav from '@menu/hooks/useVerticalNav'
@@ -57,7 +58,7 @@ const Navigation = () => {
   // Hooks
   const verticalNavOptions = useVerticalNav()
   const { updateSettings, settings } = useSettings()
-  const { lang: locale } = useParams()
+  const { lang: locale } = useParams() as { lang: Locale }
   const { mode: muiMode, systemMode: muiSystemMode } = useColorScheme()
   const theme = useTheme()
 
@@ -65,27 +66,12 @@ const Navigation = () => {
   const shadowRef = useRef(null)
 
   // Vars
-  const { isCollapsed, isHovered, collapseVerticalNav, isBreakpointReached } = verticalNavOptions
+  const { isCollapsed, isHovered, collapseVerticalNav } = verticalNavOptions
   const isSemiDark = settings.semiDark
 
   const currentMode = muiMode === 'system' ? muiSystemMode : muiMode || 'light'
 
   const isDark = currentMode === 'dark'
-
-  const scrollMenu = (container: any, isPerfectScrollbar: boolean) => {
-    container = isBreakpointReached || !isPerfectScrollbar ? container.target : container
-
-    if (shadowRef && container.scrollTop > 0) {
-      // @ts-ignore
-      if (!shadowRef.current.classList.contains('scrolled')) {
-        // @ts-ignore
-        shadowRef.current.classList.add('scrolled')
-      }
-    } else {
-      // @ts-ignore
-      shadowRef.current.classList.remove('scrolled')
-    }
-  }
 
   useEffect(() => {
     if (settings.layout === 'collapsed') {
@@ -126,7 +112,10 @@ const Navigation = () => {
           )}
         </NavHeader>
         <StyledBoxForShadow ref={shadowRef} />
-        <VerticalMenu scrollMenu={scrollMenu} />
+        <VerticalMenu />
+
+        {/* Sidebar Footer */}
+        <SidebarFooter />
       </VerticalNav>
     </AnimatedSidebar>
   )

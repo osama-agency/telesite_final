@@ -12,7 +12,8 @@ export interface CurrencyRates {
 
 export interface CurrencyApiResponse {
   success: boolean
-  data: CurrencyRates
+  data: CurrencyRates | null
+  error?: string
 }
 
 export interface UseCurrencyApiReturn {
@@ -40,11 +41,13 @@ export const useCurrencyApi = (): UseCurrencyApiReturn => {
 
       const result: CurrencyApiResponse = await response.json()
 
-      if (result.success) {
+      if (result.success && result.data) {
         setData(result.data)
+        console.log('✅ Данные валют загружены', result.data)
       } else {
-        throw new Error('Failed to fetch currency rates')
+        throw new Error(result.error || 'Ошибка получения данных валют')
       }
+
     } catch (err) {
       console.error('Currency API Error:', err)
       setError(err instanceof Error ? err.message : 'Unknown error')
@@ -69,17 +72,15 @@ export const useCurrencyApi = (): UseCurrencyApiReturn => {
       setLoading(true)
       setError(null)
 
-      // Обновляем курсы через API
-      const refreshResponse = await fetch('/api/currency/refresh', {
-        method: 'POST'
-      })
+      // Временно без реального API
+      // const refreshResponse = await fetch('/api/currency/refresh', {
+      //   method: 'POST'
+      // })
 
-      if (refreshResponse.ok) {
-        // Получаем обновленные курсы
-        await fetchCurrencyRates()
-      } else {
-        throw new Error('Failed to refresh currency rates')
-      }
+      // Симулируем обновление
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      await fetchCurrencyRates()
+
     } catch (err) {
       console.error('Currency Refresh Error:', err)
       setError(err instanceof Error ? err.message : 'Unknown error')

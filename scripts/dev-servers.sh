@@ -99,7 +99,7 @@ kill_processes() {
 
     # Убиваем все связанные процессы
     pkill -f "next dev" || true
-    pkill -f "server-3011" || true
+    pkill -f "ts-node-dev.*server.ts" || true
     pkill -f "node.*3011" || true
 
     echo -e "${CHECK} Процессы остановлены"
@@ -159,7 +159,7 @@ start_servers() {
     # Запуск backend сервера
     echo -e "${BLUE}${ROCKET} Запуск backend сервера на порту ${BACKEND_PORT}...${NC}"
     cd backend
-    nohup node server-3011.js > ../logs/backend.log 2>&1 &
+    nohup ./node_modules/.bin/ts-node-dev --respawn --transpile-only src/server.ts > ../logs/backend.log 2>&1 &
     BACKEND_PID=$!
     cd ..
 

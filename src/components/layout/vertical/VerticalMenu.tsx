@@ -1,109 +1,50 @@
 // Next Imports
-import { useParams, usePathname } from 'next/navigation'
+// import { useParams } from 'next/navigation'
 
 // MUI Imports
-import { useTheme } from '@mui/material/styles'
+// import { useTheme } from '@mui/material/styles'
+// import { Box } from '@mui/material'
 
 // Third-party Imports
-import PerfectScrollbar from 'react-perfect-scrollbar'
+// import PerfectScrollbar from 'react-perfect-scrollbar'
+import {
+  LayoutDashboard,
+  ShoppingCart,
+  Package,
+  Truck,
+  Wallet
+} from 'lucide-react'
 
 // Type Imports
-import type { VerticalMenuContextProps } from '@menu/components/vertical-menu/Menu'
+// import type { VerticalMenuContextProps } from '@menu/components/vertical-menu/Menu'
 
 // Component Imports
-import { Menu } from '@menu/vertical-menu'
-import AnimatedMenuItem from './AnimatedMenuItem'
-
+// import { Menu } from '@menu/vertical-menu'
+import SidebarItem from './SidebarItem'
+// import SidebarUserStatus from './SidebarUserStatus'
 
 // Hook Imports
-import useVerticalNav from '@menu/hooks/useVerticalNav'
+// import useVerticalNav from '@menu/hooks/useVerticalNav'
 
 // Styled Component Imports
-import StyledVerticalNavExpandIcon from '@menu/styles/vertical/StyledVerticalNavExpandIcon'
+// import StyledVerticalNavExpandIcon from '@menu/styles/vertical/StyledVerticalNavExpandIcon'
 
 // Style Imports
-import menuItemStyles from '@core/styles/vertical/menuItemStyles'
-import menuSectionStyles from '@core/styles/vertical/menuSectionStyles'
+// import menuItemStyles from '@core/styles/vertical/menuItemStyles'
+// import menuSectionStyles from '@core/styles/vertical/menuSectionStyles'
 
 // Menu Data Imports
 // import menuData from '@/data/navigation/verticalMenuData'
 
-type RenderExpandIconProps = {
-  open?: boolean
-  transitionDuration?: VerticalMenuContextProps['transitionDuration']
-}
-
-type Props = {
-  scrollMenu: (container: any, isPerfectScrollbar: boolean) => void
-}
-
-const RenderExpandIcon = ({ open, transitionDuration }: RenderExpandIconProps) => (
-  <StyledVerticalNavExpandIcon open={open} transitionDuration={transitionDuration}>
-    <i className='bx-chevron-right' />
-  </StyledVerticalNavExpandIcon>
-)
-
-const VerticalMenu = ({ scrollMenu }: Props) => {
-  // Hooks
-  const theme = useTheme()
-  const params = useParams()
-  const pathname = usePathname()
-  const verticalNavOptions = useVerticalNav()
-
-  // Vars
-  const { transitionDuration, isBreakpointReached } = verticalNavOptions
-  const { lang: locale } = params
-
-  const ScrollWrapper = isBreakpointReached ? 'div' : PerfectScrollbar
-
-  // Функция для проверки активного состояния
-  const isActive = (href: string) => pathname === href
-
+const VerticalMenu = () => {
   return (
-    <ScrollWrapper
-      {...(isBreakpointReached
-        ? {
-            className: 'bs-full overflow-y-auto overflow-x-hidden',
-            onScroll: container => scrollMenu(container, false)
-          }
-        : {
-            options: { wheelPropagation: false, suppressScrollX: true },
-            onScrollY: container => scrollMenu(container, true)
-          })}
-    >
-      <Menu
-        popoutMenuOffset={{ mainAxis: 27 }}
-        menuItemStyles={menuItemStyles(verticalNavOptions, theme)}
-        renderExpandIcon={({ open }) => <RenderExpandIcon open={open} transitionDuration={transitionDuration} />}
-        renderExpandedMenuItemIcon={{ icon: <i className='bx-bxs-circle' /> }}
-        menuSectionStyles={menuSectionStyles(verticalNavOptions, theme)}
-      >
-        <AnimatedMenuItem href={`/${locale}/dashboard`} icon={<i className='bx-home-smile' />}>
-          Дашборд
-        </AnimatedMenuItem>
-        <AnimatedMenuItem href={`/${locale}/orders`} icon={<i className='bx-cart-alt' />}>
-          Заказы
-        </AnimatedMenuItem>
-        <AnimatedMenuItem href={`/${locale}/products`} icon={<i className='bx-package' />}>
-          Товары
-        </AnimatedMenuItem>
-        <AnimatedMenuItem href={`/${locale}/procurement`} icon={<i className='bx-store' />}>
-          Закупки
-        </AnimatedMenuItem>
-        <AnimatedMenuItem href={`/${locale}/expenses`} icon={<i className='bx-money' />}>
-          Расходы
-        </AnimatedMenuItem>
-      </Menu>
-      {/* <Menu
-        popoutMenuOffset={{ mainAxis: 27 }}
-        menuItemStyles={menuItemStyles(verticalNavOptions, theme)}
-        renderExpandIcon={({ open }) => <RenderExpandIcon open={open} transitionDuration={transitionDuration} />}
-        renderExpandedMenuItemIcon={{ icon: <i className='bx-bxs-circle' /> }}
-        menuSectionStyles={menuSectionStyles(verticalNavOptions, theme)}
-      >
-        <GenerateVerticalMenu menuData={menuData(dictionary)} />
-      </Menu> */}
-    </ScrollWrapper>
+    <>
+      <SidebarItem icon={LayoutDashboard} label="Дашборд" href="/ru/dashboard" />
+      <SidebarItem icon={ShoppingCart} label="Заказы" href="/ru/orders" />
+      <SidebarItem icon={Package} label="Товары" href="/ru/products" />
+      <SidebarItem icon={Truck} label="Закупки" href="/ru/procurement" />
+      <SidebarItem icon={Wallet} label="Расходы" href="/ru/expenses" />
+    </>
   )
 }
 

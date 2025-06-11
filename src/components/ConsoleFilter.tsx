@@ -7,6 +7,8 @@ const ConsoleFilter = () => {
     // Only filter console warnings in development mode
     if (process.env.NODE_ENV === 'development') {
       const originalWarn = console.warn
+      const originalLog = console.log
+      const originalInfo = console.info
 
       console.warn = (...args) => {
         // Filter out the specific Next.js 15 params enumeration warning
@@ -14,7 +16,8 @@ const ConsoleFilter = () => {
 
         if (
           message.includes('params are being enumerated') ||
-          message.includes('params should be unwrapped with React.use()')
+          message.includes('params should be unwrapped with React.use()') ||
+          message.toLowerCase().includes('static route')
         ) {
           return
         }
@@ -22,9 +25,31 @@ const ConsoleFilter = () => {
         originalWarn(...args)
       }
 
-      // Cleanup function to restore original console.warn
+      console.log = (...args) => {
+        const message = args.join(' ')
+
+        if (message.toLowerCase().includes('static route')) {
+          return
+        }
+
+        originalLog(...args)
+      }
+
+      console.info = (...args) => {
+        const message = args.join(' ')
+
+        if (message.toLowerCase().includes('static route')) {
+          return
+        }
+
+        originalInfo(...args)
+      }
+
+      // Cleanup function to restore original console methods
       return () => {
         console.warn = originalWarn
+        console.log = originalLog
+        console.info = originalInfo
       }
     }
   }, [])
